@@ -1,0 +1,10 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "codexprov4",
+  "outputfilename": "codexprov4",
+  "wailsjsdir": "./frontend",
+  "author": {
+    "name": "wanstu",
+    "email": "wanstu@163.com"
+  }
+}
