@@ -264,6 +264,35 @@ select:focus {
     color: #b42318;
 }
 
+.toast {
+    position: fixed;
+    z-index: 1000;
+    right: 24px;
+    bottom: 24px;
+    max-width: min(440px, calc(100vw - 48px));
+    border: 1px solid #abefc6;
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: #ecfdf3;
+    color: #067647;
+    box-shadow: 0 12px 36px rgba(16, 24, 40, 0.16);
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.toast.info {
+    border-color: #c7d7fe;
+    background: #eef4ff;
+    color: #3538cd;
+}
+
+.toast.error {
+    border-color: #fecdca;
+    background: #fef3f2;
+    color: #b42318;
+}
+
 .workspace-section {
     min-width: 0;
 }
@@ -552,7 +581,7 @@ select:focus {
 
 .manager-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
     gap: 16px;
     margin-top: 18px;
 }
@@ -569,6 +598,20 @@ select:focus {
 .manager-item {
     display: grid;
     gap: 6px;
+}
+
+.manager-domain-form label {
+    display: grid;
+    gap: 7px;
+}
+
+.manager-domain-form small {
+    line-height: 1.55;
+}
+
+.manager-domain-form .button {
+    justify-self: start;
+    margin-top: 4px;
 }
 
 .manager-value {

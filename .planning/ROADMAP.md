@@ -88,6 +88,9 @@
 - 全量中文文案检查，确保 UTF-8 路径与中文目录正常。
 - 检查常见 Windows 缩放比例下的布局，不截断、不遮挡。
 - 所有复选框、端口模式、启动/停止、删除等控件具备自解释标签或辅助说明。
+- 统一复制反馈：Token / 完整 MCP 链接复制成功后明确提示“复制成功”。
+- 增加 manager-level `domain`，仅用于 Workspace 访问/复制链接；空值默认 `127.0.0.1`，不得影响 `CODEXPRO_HOST`。
+- Workspace 卡片展示掩码后的完整 MCP 链接，并提供“打开”“复制链接”；链接包含 `/mcp` endpoint 和 Workspace Token，不再提供单独“复制端口”。
 - 校验错误、启动失败、端口冲突、core 不存在等异常路径给出用户可理解反馈。
 - 验证 `codexpro-core.exe` 同目录部署约束。
 - 完整回归 Workspace / Process / Tray / Auto-start。

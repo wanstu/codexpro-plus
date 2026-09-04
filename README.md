@@ -20,6 +20,8 @@ CodexPro+ 是一个面向 Windows 的 CodexPro Workspace / Runtime 管理器。
 - 管理器本身支持 Windows 开机自启动。
 - 每个 Workspace 可单独设置“随管理器启动”。
 - 配置版本迁移和旧 `codexprov4` 配置兼容。
+- Workspace 卡片可复制完整 MCP 链接，并用默认浏览器打开该地址；链接包含 `/mcp` endpoint 和 Workspace Token。
+- 管理器可配置“复制链接域名”；留空默认使用 `127.0.0.1`，且不会改变 core 实际监听地址。
 - GitHub Actions 自动测试、构建 Windows 发布包，并在 tag 时自动创建 Release。
 
 ## 项目关系
@@ -128,6 +130,21 @@ Workspace 日志：
 ```text
 ~/.config/codexpro-plus/logs/<workspace-id>.log
 ```
+
+### 复制链接域名
+
+`config.json` 中的 manager-level `domain` 只用于生成 Workspace 的访问/复制链接。
+
+```text
+domain 为空                 -> http://127.0.0.1:8800/mcp?<token-query>
+domain = localhost          -> http://localhost:8800/mcp?<token-query>
+domain = dev.example.com    -> http://dev.example.com:8800/mcp?<token-query>
+domain = https://dev.example.com -> https://dev.example.com:8800/mcp?<token-query>
+```
+
+`<token-query>` 代表 CodexPro 的 Workspace Token 查询参数；“复制链接”会生成可直接给 MCP 客户端使用的完整 URL。
+
+不要在 `domain` 中填写端口；Workspace 自己的 `port` 会被追加到链接中。该设置不会改变 `CODEXPRO_HOST=127.0.0.1`，因此它不会让 CodexPro 自动监听局域网或公网地址。
 
 ## 本地开发环境
 

@@ -1,6 +1,7 @@
 const state = {
     config: null,
     manager: null,
+    workspaceURLs: new Map(),
     runtimeStates: new Map(),
     instances: [],
     editingId: null,
@@ -12,6 +13,7 @@ const state = {
 
 const elements = {
     message: document.getElementById("message"),
+    toast: document.getElementById("toast"),
     workspaceList: document.getElementById("workspace-list"),
     emptyState: document.getElementById("empty-state"),
     workspaceCount: document.getElementById("workspace-count"),
@@ -24,6 +26,8 @@ const elements = {
     corePath: document.getElementById("core-path"),
     managerAutoStart: document.getElementById("manager-auto-start"),
     managerError: document.getElementById("manager-error"),
+    domainForm: document.getElementById("domain-form"),
+    copyDomain: document.getElementById("copy-domain"),
     portRangeForm: document.getElementById("port-range-form"),
     portStart: document.getElementById("port-start"),
     portEnd: document.getElementById("port-end"),
@@ -54,6 +58,8 @@ const elements = {
     logDoneButton: document.getElementById("log-done-button"),
 };
 
+let toastTimer = null;
+
 function appApi() {
     const api = window.go?.main?.App;
     if (!api) {
@@ -79,6 +85,17 @@ function clearMessage() {
     elements.message.className = "message hidden";
 }
 
+function showToast(text, type = "success") {
+    if (toastTimer) window.clearTimeout(toastTimer);
+    elements.toast.textContent = text;
+    elements.toast.className = `toast ${type}`;
+    toastTimer = window.setTimeout(() => {
+        elements.toast.textContent = "";
+        elements.toast.className = "toast hidden";
+        toastTimer = null;
+    }, 2600);
+}
+
 function showDialogMessage(text) {
     elements.dialogMessage.textContent = text;
     elements.dialogMessage.className = "message error";
@@ -93,12 +110,28 @@ async function loadConfig() {
     try {
         const config = await appApi().GetConfig();
         state.config = config;
+        await refreshWorkspaceURLs(config?.workspaces || []);
         renderConfig();
         return true;
     } catch (error) {
         showMessage(`读取配置失败：${errorText(error)}`, "error");
         elements.workspaceCount.textContent = "配置读取失败";
         return false;
+    }
+}
+
+async function refreshWorkspaceURLs(workspaces) {
+    const pairs = await Promise.all((workspaces || []).map(async (workspace) => {
+        try {
+            return [workspace.id, await appApi().GetWorkspaceURL(workspace.id)];
+        } catch (error) {
+            return [workspace.id, "", errorText(error)];
+        }
+    }));
+    state.workspaceURLs = new Map(pairs.map(([id, workspaceURL]) => [id, workspaceURL]));
+    const failed = pairs.find(([, workspaceURL]) => !workspaceURL);
+    if (failed) {
+        showMessage(`生成访问地址失败：${failed[2]}`, "error");
     }
 }
 
@@ -167,6 +200,7 @@ function renderConfig() {
     const portRange = config.port_range || {start: 8800, end: 8899};
     const workspaces = Array.isArray(config.workspaces) ? config.workspaces : [];
 
+    elements.copyDomain.value = config.domain || "";
     elements.portStart.value = portRange.start ?? 8800;
     elements.portEnd.value = portRange.end ?? 8899;
     elements.workspaceCount.textContent = workspaces.length === 0
@@ -192,6 +226,7 @@ function createWorkspaceCard(workspace) {
     const starting = Boolean(runtimeState.starting) || state.pendingStarts.has(workspace.id);
     const stopping = state.pendingStops.has(workspace.id);
     const processBusy = starting || stopping;
+    const workspaceURL = state.workspaceURLs.get(workspace.id) || "";
 
     const card = document.createElement("article");
     card.className = running ? "workspace-card running-card" : "workspace-card";
@@ -237,6 +272,7 @@ function createWorkspaceCard(workspace) {
 
     card.appendChild(metaRow("目录", workspace.path || "—", true));
     card.appendChild(metaRow("端口", String(workspace.port ?? "—"), false));
+    card.appendChild(metaRow("MCP 链接", maskWorkspaceURL(workspaceURL), true));
     card.appendChild(metaRow(
         "CodexPro",
         `bash=${workspace.bash_mode || "full"} · write=${workspace.write_mode || "workspace"} · tool=${workspace.tool_mode || "full"} · env=${workspace.inherit_env ? "inherit" : "clean"}`,
@@ -257,6 +293,27 @@ function createWorkspaceCard(workspace) {
 
     const actions = document.createElement("div");
     actions.className = "workspace-actions";
+
+    const openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.className = "button secondary small";
+    openButton.textContent = "打开";
+    openButton.disabled = !workspaceURL;
+    openButton.title = workspaceURL ? maskWorkspaceURL(workspaceURL) : "MCP 链接生成失败";
+    openButton.addEventListener("click", () => openWorkspaceURL(workspace));
+
+    const copyURLButton = document.createElement("button");
+    copyURLButton.type = "button";
+    copyURLButton.className = "button ghost small";
+    copyURLButton.textContent = "复制链接";
+    copyURLButton.disabled = !workspaceURL;
+    copyURLButton.addEventListener("click", () => copyText(workspaceURL, "MCP 链接"));
+
+    // 单独复制端口已移除；复制链接包含完整 MCP 地址和认证 token。
+
+
+
+
 
     const processButton = document.createElement("button");
     processButton.type = "button";
@@ -287,7 +344,7 @@ function createWorkspaceCard(workspace) {
     deleteButton.title = running || starting ? "请先等待启动完成并停止服务后再删除" : "删除工作目录";
     deleteButton.addEventListener("click", () => deleteWorkspace(workspace));
 
-    actions.append(processButton, logButton, editButton, deleteButton);
+    actions.append(openButton, copyURLButton, processButton, logButton, editButton, deleteButton);
     card.appendChild(actions);
     return card;
 }
@@ -329,14 +386,7 @@ function tokenRow(token) {
     copyButton.className = "link-button";
     copyButton.textContent = "复制";
     copyButton.disabled = !token;
-    copyButton.addEventListener("click", async () => {
-        try {
-            await copyText(token);
-            showMessage("Token 已复制到剪贴板。", "success");
-        } catch (error) {
-            showMessage(`复制 Token 失败：${errorText(error)}`, "error");
-        }
-    });
+    copyButton.addEventListener("click", () => copyText(token, "Token"));
     wrapper.appendChild(copyButton);
     row.append(key, wrapper);
     return row;
@@ -348,20 +398,55 @@ function maskToken(token) {
     return `${token.slice(0, 8)}…${token.slice(-8)}`;
 }
 
-async function copyText(text) {
-    if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        return;
+function maskWorkspaceURL(value) {
+    if (!value) return "生成失败";
+    const marker = "codexpro_" + "token=";
+    const markerIndex = value.indexOf(marker);
+    if (markerIndex < 0) return value;
+
+    const tokenStart = markerIndex + marker.length;
+    const tokenEnd = value.indexOf("&", tokenStart);
+    const rawToken = value.slice(tokenStart, tokenEnd < 0 ? value.length : tokenEnd);
+    let token = rawToken;
+    try {
+        token = decodeURIComponent(rawToken);
+    } catch (_) {
+        // Keep the raw value if it is not URL encoded.
     }
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    const copied = document.execCommand("copy");
-    textarea.remove();
-    if (!copied) throw new Error("系统剪贴板不可用");
+    const suffixStart = tokenEnd < 0 ? value.length : tokenEnd;
+    return `${value.slice(0, tokenStart)}${maskToken(token)}${value.slice(suffixStart)}`;
+}
+
+async function copyText(text, label = "内容") {
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.style.position = "fixed";
+            textarea.style.opacity = "0";
+            document.body.appendChild(textarea);
+            textarea.select();
+            const copied = document.execCommand("copy");
+            textarea.remove();
+            if (!copied) throw new Error("系统剪贴板不可用");
+        }
+        showToast(`复制成功：${label}`, "success");
+        return true;
+    } catch (error) {
+        showToast(`复制失败：${errorText(error)}`, "error");
+        return false;
+    }
+}
+
+async function openWorkspaceURL(workspace) {
+    try {
+        await appApi().OpenWorkspaceURL(workspace.id);
+        showToast("已打开 MCP 链接。", "success");
+    } catch (error) {
+        showToast(`打开链接失败：${errorText(error)}`, "error");
+    }
 }
 
 function renderInstances() {
@@ -415,10 +500,10 @@ async function startWorkspace(workspace) {
     state.pendingStarts.add(workspace.id);
     renderWorkspaceList();
     clearMessage();
-    showMessage(`正在启动“${workspace.alias}”…`, "info");
+    showToast(`正在启动“${workspace.alias}”…`, "info");
     try {
         const instance = await appApi().StartWorkspace(workspace.id);
-        showMessage(`“${workspace.alias}”已启动，PID ${instance.pid}，端口 ${instance.port}。`, "success");
+        showToast(`“${workspace.alias}”已启动，PID ${instance.pid}，端口 ${instance.port}。`, "success");
     } catch (error) {
         showMessage(`启动失败：${errorText(error)}`, "error");
     } finally {
@@ -432,10 +517,10 @@ async function stopWorkspace(workspace) {
     state.pendingStops.add(workspace.id);
     renderWorkspaceList();
     clearMessage();
-    showMessage(`正在停止“${workspace.alias}”…`, "info");
+    showToast(`正在停止“${workspace.alias}”…`, "info");
     try {
         await appApi().StopWorkspace(workspace.id);
-        showMessage(`“${workspace.alias}”已停止。`, "success");
+        showToast(`“${workspace.alias}”已停止。`, "success");
     } catch (error) {
         showMessage(`停止失败：${errorText(error)}`, "error");
     } finally {
@@ -607,14 +692,14 @@ async function submitWorkspace(event) {
             closeWorkspaceDialog();
             if (await loadConfig()) {
                 await loadRuntime();
-                showMessage("工作目录已更新。", "success");
+                showToast("工作目录已更新。", "success");
             }
         } else {
             await appApi().AddWorkspace(input);
             closeWorkspaceDialog();
             if (await loadConfig()) {
                 await loadRuntime();
-                showMessage("工作目录已添加，并已生成稳定连接 Token。", "success");
+                showToast("工作目录已添加，并已生成稳定连接 Token。", "success");
             }
         }
     } catch (error) {
@@ -637,10 +722,29 @@ async function deleteWorkspace(workspace) {
         await appApi().DeleteWorkspace(workspace.id);
         if (await loadConfig()) {
             await loadRuntime();
-            showMessage(`已删除“${workspace.alias}”。`, "success");
+            showToast(`已删除“${workspace.alias}”。`, "success");
         }
     } catch (error) {
         showMessage(`删除失败：${errorText(error)}`, "error");
+    }
+}
+
+async function saveDomain(event) {
+    event.preventDefault();
+    const submitButton = elements.domainForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.textContent = "保存中…";
+    try {
+        const config = await appApi().UpdateDomain(elements.copyDomain.value.trim());
+        state.config = config;
+        await refreshWorkspaceURLs(config?.workspaces || []);
+        renderConfig();
+        showToast("复制链接域名已保存。", "success");
+    } catch (error) {
+        showMessage(`保存复制链接域名失败：${errorText(error)}`, "error");
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "保存域名";
     }
 }
 
@@ -658,7 +762,7 @@ async function savePortRange(event) {
         });
         state.config = config;
         renderConfig();
-        showMessage("自动端口范围已保存。", "success");
+        showToast("自动端口范围已保存。", "success");
     } catch (error) {
         showMessage(`保存端口范围失败：${errorText(error)}`, "error");
     } finally {
@@ -673,7 +777,7 @@ async function changeManagerAutoStart() {
     try {
         state.manager = await appApi().SetManagerAutoStart(enabled);
         renderManagerSettings();
-        showMessage(enabled ? "已开启 Windows 开机自启。" : "已关闭 Windows 开机自启。", "success");
+        showToast(enabled ? "已开启 Windows 开机自启。" : "已关闭 Windows 开机自启。", "success");
     } catch (error) {
         elements.managerAutoStart.checked = !enabled;
         elements.managerAutoStart.disabled = false;
@@ -686,6 +790,7 @@ elements.emptyAddButton.addEventListener("click", openAddDialog);
 elements.dialogCloseButton.addEventListener("click", closeWorkspaceDialog);
 elements.dialogCancelButton.addEventListener("click", closeWorkspaceDialog);
 elements.workspaceForm.addEventListener("submit", submitWorkspace);
+elements.domainForm.addEventListener("submit", saveDomain);
 elements.portRangeForm.addEventListener("submit", savePortRange);
 elements.managerAutoStart.addEventListener("change", changeManagerAutoStart);
 elements.logCloseButton.addEventListener("click", closeLogDialog);

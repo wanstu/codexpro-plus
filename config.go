@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	configVersion         = 3
+	configVersion         = 4
 	defaultPortStart      = 8800
 	defaultPortEnd        = 8899
 	tokenBytes            = 32
@@ -25,6 +25,7 @@ const (
 type Config struct {
 	Version    int         `json:"version"`
 	PortRange  PortRange   `json:"port_range"`
+	Domain     string      `json:"domain"`
 	Workspaces []Workspace `json:"workspaces"`
 }
 

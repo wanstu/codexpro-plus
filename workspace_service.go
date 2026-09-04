@@ -217,6 +217,45 @@ func (s *WorkspaceService) UpdatePortRange(portRange PortRange) (Config, error) 
 	return cfg, nil
 }
 
+func (s *WorkspaceService) UpdateDomain(domain string) (Config, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	normalized, err := normalizeCopyDomain(domain)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg, err := s.loadConfig()
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.Domain = normalized
+	if err := s.store.Save(cfg); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
+}
+
+func (s *WorkspaceService) GetWorkspaceURL(id string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return "", errors.New("工作目录 ID 不能为空")
+	}
+	cfg, err := s.loadConfig()
+	if err != nil {
+		return "", err
+	}
+	for _, workspace := range cfg.Workspaces {
+		if workspace.ID == id {
+			return buildWorkspaceURL(workspace, cfg)
+		}
+	}
+	return "", errors.New("未找到工作目录")
+}
+
 func (s *WorkspaceService) loadConfig() (Config, error) {
 	if s == nil || s.store == nil {
 		return Config{}, errors.New("配置服务未初始化")

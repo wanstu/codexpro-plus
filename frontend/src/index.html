@@ -18,6 +18,7 @@
     </header>
 
     <div aria-live="polite" class="message hidden" id="message" role="status"></div>
+    <div aria-live="polite" class="toast hidden" id="toast" role="status"></div>
 
     <main class="content">
         <section class="panel manager-panel" aria-labelledby="manager-title">
@@ -40,6 +41,14 @@
                         <small>启用后以托盘隐藏模式启动管理器；勾选“随管理器启动”的 Workspace 会自动拉起。</small>
                     </span>
                 </label>
+                <form class="manager-item manager-domain-form" id="domain-form">
+                    <label for="copy-domain">
+                        <span class="meta-label">复制链接域名</span>
+                        <input autocomplete="off" id="copy-domain" placeholder="例如：dev.example.com 或 https://dev.example.com" type="text"/>
+                    </label>
+                    <small>仅用于生成 Workspace 的访问/复制链接，不会改变 CodexPro 实际监听地址。留空时使用 127.0.0.1。</small>
+                    <button class="button secondary small" type="submit">保存域名</button>
+                </form>
             </div>
             <div class="inline-error hidden" id="manager-error"></div>
         </section>

@@ -105,6 +105,35 @@ func (a *App) UpdatePortRange(portRange PortRange) (Config, error) {
 	return a.service.UpdatePortRange(portRange)
 }
 
+func (a *App) UpdateDomain(domain string) (Config, error) {
+	if err := a.ready(); err != nil {
+		return Config{}, err
+	}
+	return a.service.UpdateDomain(domain)
+}
+
+func (a *App) GetWorkspaceURL(id string) (string, error) {
+	if err := a.ready(); err != nil {
+		return "", err
+	}
+	return a.service.GetWorkspaceURL(id)
+}
+
+func (a *App) OpenWorkspaceURL(id string) (string, error) {
+	if err := a.ready(); err != nil {
+		return "", err
+	}
+	if a.ctx == nil {
+		return "", errors.New("应用窗口尚未就绪")
+	}
+	workspaceURL, err := a.service.GetWorkspaceURL(id)
+	if err != nil {
+		return "", err
+	}
+	runtime.BrowserOpenURL(a.ctx, workspaceURL)
+	return workspaceURL, nil
+}
+
 func (a *App) StartWorkspace(id string) (Instance, error) {
 	if err := a.ready(); err != nil {
 		return Instance{}, err

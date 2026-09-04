@@ -3,24 +3,24 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: 可用托盘管理器
 status: release_candidate
-last_updated: "2026-09-04T21:43:00+08:00"
+last_updated: "2026-09-04T23:42:00+08:00"
 last_activity: 2026-09-04
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 3
+  total_plans: 4
   completed_plans: 1
-  percent: 70
+  percent: 82
 ---
 
 # Project State
 
 ## Current Position
 
-Phase: 2 + 3 of 4 — 进程生命周期 + 托盘与两级自启
-Plan: 02-01 + 03-01
-Status: Release candidate; Go tests and Wails production build pass, final repeated-launch wake smoke test pending
-Last activity: 2026-09-04 — Added manager single-instance wake behavior and prepared first release tag
+Phase: 4 of 4 — UX / 稳定性 / 发布验证
+Plan: 04-01
+Status: Release candidate; Phase 4 copy/domain/MCP-link/toast/icon UX has passed user manual verification; release packaging checks remain
+Last activity: 2026-09-04 — User manually verified the Phase 4 UX batch and confirmed it works well
 
 ## Planning Artifacts
 
@@ -75,10 +75,22 @@ Last activity: 2026-09-04 — Added manager single-instance wake behavior and pr
 - Added Windows GitHub Actions CI: Go tests, pinned CodexPro core build, Wails build, ZIP artifact, and automatic GitHub Release for `v*` tags.
 - README replaced with full architecture, build, core packaging, configuration, CI and release documentation.
 
+## Implemented for Phase 4
+
+- Config schema is now v4 with manager-level `domain`; v1/v2/v3 configs remain compatible and an empty value intentionally means `127.0.0.1` for copied/access URLs.
+- Workspace URL generation is centralized in Go: missing scheme -> `http://`, explicit `http://` / `https://` preserved, Workspace port appended.
+- Domain validation rejects embedded ports, credentials, paths, query strings and fragments to avoid ambiguous URLs.
+- `domain` is UI/copy-only. `ProcessManager` remains unchanged with `CODEXPRO_HOST=127.0.0.1`.
+- Workspace cards now show a masked full MCP URL and provide “打开” + “复制链接”; the generated URL includes `/mcp` plus the Workspace Token query, and the standalone “复制端口” action has been removed.
+- Token and MCP-link copy actions share one helper and show a transient “复制成功” toast; routine start/stop/save success feedback also uses transient Toast, while the top message area is reserved for persistent errors/warnings/notices.
+- Manager panel now has a “复制链接域名” setting with an explicit note that it does not change core listening behavior.
+- Added a dedicated CodexPro+ `C+` application icon: `build/appicon.png` is the Windows build source and the tray embeds the matching frontend icon; the stale Wails default `icon.ico` is removed so the next build regenerates it.
+- README and Phase 4 planning document the new URL behavior and boundary.
+
 ## Verification Status / Risks
 
 1. Repository static analysis recognizes all current Go/JS symbols without parser warnings.
-2. Latest Windows verification passes: `go test ./...` = ok and Wails v2.15 production build succeeds with Go 1.26.5 after schema-v3, startup-lock, single-instance and wake-request changes.
+2. Current UX/MCP-link/icon changes pass `go test ./...` and `node --check frontend/src/main.js`; the user has also manually verified the current build and confirmed the Phase 4 UX works well. Future automated verification must not launch the produced exe while the active CodexPro+ instance is in use.
 3. Live `@codexprov4-1` verification passed earlier: root/allowed root = `D:\projects\work\wm_group`, port 8600, auth enabled, bash=full, write=workspace, tool=full, inheritEnv=true; CodexPro self-test reported 0 failures.
 4. Runtime diagnosis previously found three simultaneously running managers and split runtime state; current observation now shows only one `codexprov4.exe`, consistent with MGR-01 single-instance behavior.
 5. Wake-request file lifecycle has a Windows unit test. Final manual smoke check remains: hidden primary + repeated `--autostart` stays hidden; normal repeated launch restores/shows the existing window.
@@ -86,8 +98,8 @@ Last activity: 2026-09-04 — Added manager single-instance wake behavior and pr
 
 ## Next Action
 
-1. Commit the CodexPro+ rename, config migration, core build script, README and CI workflow.
-2. Repoint local `v1.0.0-rc1` to the release-candidate commit before the first remote push.
-3. Create `wanstu/codexpro-plus`, push `master`, then push `v1.0.0-rc1`.
-4. Verify the GitHub Actions Windows workflow passes and that the prerelease contains `CodexProPlus-windows-amd64.zip`.
-5. Final manual smoke check: ordinary repeated launch restores the existing window; repeated `--autostart` remains silent.
+1. Commit the user-verified Phase 4 UX/MCP-link/icon batch.
+2. Reconfirm ordinary repeated launch restores the existing hidden window and repeated `--autostart` remains silent.
+3. Verify the GitHub Actions Windows workflow / release artifact after the next push.
+4. Decide whether the next tag should be `v1.0.0-rc2` or final `v1.0.0`.
+

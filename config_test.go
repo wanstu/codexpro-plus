@@ -32,6 +32,7 @@ func TestConfigStoreRoundTripUnicode(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
 	store := NewConfigStore(path)
 	want := DefaultConfig()
+	want.Domain = "https://dev.example.com"
 	want.Workspaces = []Workspace{
 		{
 			ID:        "workspace-1",
