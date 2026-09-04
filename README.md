@@ -206,8 +206,34 @@ wails build
 输出：
 
 ```text
-build/bin/codexpro-plus.exe
+build/bin/codexpro-plus-dev.exe
 ```
+
+### 本地 Dev 构建
+
+本地直接 `wails build` 默认就是独立 Dev profile；GitHub Actions 会显式覆盖为 Release profile。两者可以并行运行，不共享配置、单实例锁或 Windows 自启动项。
+
+```powershell
+.\scripts\build-local.ps1
+```
+
+输出：
+
+```text
+build/bin/codexpro-plus-dev.exe
+```
+
+隔离关系：
+
+```text
+GitHub / Release                本地 Dev
+codexpro-plus.exe               codexpro-plus-dev.exe
+CodexPro+                       CodexPro+ Dev
+~/.config/codexpro-plus         ~/.config/codexpro-plus-dev
+CodexProPlus 自启动项           CodexProPlusDev 自启动项
+```
+
+Dev 首次启动不会复制正式版配置，避免自动启动同一批 Workspace 或复用端口。页面左上角会显示 `DEV` 标识。`build-local.ps1` 只构建，不会自动启动 exe。
 
 开发模式：
 

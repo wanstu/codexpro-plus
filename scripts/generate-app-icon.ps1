@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+Add-Type -AssemblyName System.Drawing
+
 $root = Split-Path -Parent $PSScriptRoot
 
 $appSource = Join-Path $root "assets\icons\codexpro-plus-app.png"
@@ -21,23 +23,64 @@ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $buildIcon) | Out-
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $frontendAppIcon) | Out-Null
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $frontendTrayIcon) | Out-Null
 
-# Wails derives the native Windows icon from build/appicon.png.
-# Use the dedicated window/taskbar artwork for that native resource.
-Copy-Item -Force $windowSource $buildIcon
+function Export-FittedSquareIcon {
+    param(
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$Destination,
+        [double]$Fill = 0.98
+    )
 
-# Keep the app artwork available to the embedded frontend and use the
-# dedicated tray artwork for the Windows system tray.
-Copy-Item -Force $appSource $frontendAppIcon
-Copy-Item -Force $traySource $frontendTrayIcon
+    $sourceBitmap = [System.Drawing.Bitmap]::FromFile($Source)
+    try {
+        $canvasSize = 1024
+        $targetSize = $canvasSize * $Fill
+        $scale = [Math]::Min($targetSize / $sourceBitmap.Width, $targetSize / $sourceBitmap.Height)
+        $drawWidth = [int][Math]::Round($sourceBitmap.Width * $scale)
+        $drawHeight = [int][Math]::Round($sourceBitmap.Height * $scale)
+        $drawX = [int][Math]::Round(($canvasSize - $drawWidth) / 2)
+        $drawY = [int][Math]::Round(($canvasSize - $drawHeight) / 2)
 
-# Wails only regenerates build/windows/icon.ico when it is missing.
-# Remove the previous resource so the next build derives it from the new
-# window/taskbar source above.
+        $output = New-Object System.Drawing.Bitmap($canvasSize, $canvasSize, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        try {
+            $graphics = [System.Drawing.Graphics]::FromImage($output)
+            try {
+                $graphics.Clear([System.Drawing.Color]::Transparent)
+                $graphics.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
+                $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+                $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+                $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+                $graphics.DrawImage($sourceBitmap, $drawX, $drawY, $drawWidth, $drawHeight)
+            }
+            finally {
+                $graphics.Dispose()
+            }
+            $output.Save($Destination, [System.Drawing.Imaging.ImageFormat]::Png)
+        }
+        finally {
+            $output.Dispose()
+        }
+    }
+    finally {
+        $sourceBitmap.Dispose()
+    }
+}
+
+# The current source artwork is already tightly cropped. Keep the entire mark,
+# normalize it onto a square icon canvas, and let it occupy almost the full slot.
+Export-FittedSquareIcon -Source $appSource -Destination $frontendAppIcon -Fill 0.98
+Export-FittedSquareIcon -Source $windowSource -Destination $buildIcon -Fill 0.98
+
+# Windows tray slots are square. A 603x325 horizontal logo will always look
+# undersized vertically when aspect ratio is preserved. Like img-lock-v2, use a
+# compact square mark for the tray instead of shrinking the wide brand lockup.
+Export-FittedSquareIcon -Source $windowSource -Destination $frontendTrayIcon -Fill 0.99
+
+# Wails regenerates the Windows ICO from build/appicon.png when this is absent.
 if (Test-Path $windowsIcon) {
     Remove-Item -Force $windowsIcon
 }
 
-Write-Host "Prepared CodexPro+ icon assets:"
+Write-Host "Prepared full-size CodexPro+ icon assets:"
 Write-Host "  app:    $frontendAppIcon"
 Write-Host "  tray:   $frontendTrayIcon"
 Write-Host "  window: $buildIcon"

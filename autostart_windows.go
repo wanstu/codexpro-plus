@@ -13,7 +13,6 @@ import (
 
 const (
 	managerRunKeyPath     = `Software\Microsoft\Windows\CurrentVersion\Run`
-	managerRunValue       = "CodexProPlus"
 	legacyManagerRunValue = "CodexProV4"
 )
 
@@ -32,12 +31,16 @@ func managerAutoStartEnabled() (bool, error) {
 		return false, err
 	}
 
-	value, _, err := key.GetStringValue(managerRunValue)
+	runValue := managerRunValueName()
+	value, _, err := key.GetStringValue(runValue)
 	if err == nil {
 		return strings.EqualFold(strings.TrimSpace(value), expected), nil
 	}
 	if !errors.Is(err, registry.ErrNotExist) {
 		return false, fmt.Errorf("读取开机自启配置失败: %w", err)
+	}
+	if isDevBuild() {
+		return false, nil
 	}
 
 	if _, _, err := key.GetStringValue(legacyManagerRunValue); err != nil {
@@ -47,7 +50,7 @@ func managerAutoStartEnabled() (bool, error) {
 		return false, fmt.Errorf("读取旧版开机自启配置失败: %w", err)
 	}
 
-	if err := key.SetStringValue(managerRunValue, expected); err != nil {
+	if err := key.SetStringValue(runValue, expected); err != nil {
 		return false, fmt.Errorf("迁移开机自启配置失败: %w", err)
 	}
 	_ = key.DeleteValue(legacyManagerRunValue)
@@ -64,7 +67,11 @@ func setManagerAutoStart(enabled bool) error {
 			return fmt.Errorf("打开开机自启配置失败: %w", err)
 		}
 		defer key.Close()
-		for _, name := range []string{managerRunValue, legacyManagerRunValue} {
+		names := []string{managerRunValueName()}
+		if !isDevBuild() {
+			names = append(names, legacyManagerRunValue)
+		}
+		for _, name := range names {
 			if err := key.DeleteValue(name); err != nil && !errors.Is(err, registry.ErrNotExist) {
 				return fmt.Errorf("关闭开机自启失败: %w", err)
 			}
@@ -82,10 +89,12 @@ func setManagerAutoStart(enabled bool) error {
 	}
 	defer key.Close()
 
-	if err := key.SetStringValue(managerRunValue, command); err != nil {
+	if err := key.SetStringValue(managerRunValueName(), command); err != nil {
 		return fmt.Errorf("保存开机自启配置失败: %w", err)
 	}
-	_ = key.DeleteValue(legacyManagerRunValue)
+	if !isDevBuild() {
+		_ = key.DeleteValue(legacyManagerRunValue)
+	}
 	return nil
 }
 

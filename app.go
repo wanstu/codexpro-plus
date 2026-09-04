@@ -8,11 +8,14 @@ import (
 )
 
 type ManagerSettings struct {
-	AutoStart bool   `json:"auto_start"`
-	CoreReady bool   `json:"core_ready"`
-	CorePath  string `json:"core_path"`
-	CoreError string `json:"core_error"`
-	TrayError string `json:"tray_error"`
+	AutoStart    bool   `json:"auto_start"`
+	CoreReady    bool   `json:"core_ready"`
+	CorePath     string `json:"core_path"`
+	CoreError    string `json:"core_error"`
+	TrayError    string `json:"tray_error"`
+	BuildProfile string `json:"build_profile"`
+	AppName      string `json:"app_name"`
+	ConfigPath   string `json:"config_path"`
 }
 
 type App struct {
@@ -177,7 +180,12 @@ func (a *App) GetManagerSettings() (ManagerSettings, error) {
 	if err != nil {
 		return ManagerSettings{}, err
 	}
-	settings := ManagerSettings{AutoStart: autoStart}
+	settings := ManagerSettings{
+		AutoStart:    autoStart,
+		BuildProfile: currentBuildProfile(),
+		AppName:      appDisplayName(),
+		ConfigPath:   a.service.store.Path(),
+	}
 	if path, err := a.processes.CorePath(); err != nil {
 		settings.CoreError = err.Error()
 	} else {

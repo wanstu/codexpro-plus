@@ -55,7 +55,7 @@ jobs:
         shell: pwsh
         run: |
           $wails = Join-Path (go env GOPATH) "bin\wails.exe"
-          & $wails build
+          & $wails build -o codexpro-plus.exe -ldflags "-X main.buildProfile=release"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify release files

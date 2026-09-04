@@ -39,6 +39,17 @@ func TestAcquireInstanceLockAllowsOnlyOneOwner(t *testing.T) {
 	}
 }
 
+func TestDevSingleInstanceControlDirUsesDevConfig(t *testing.T) {
+	withBuildProfile(t, devBuildProfile)
+	dir, err := singleInstanceControlDir()
+	if err != nil {
+		t.Fatalf("singleInstanceControlDir() error = %v", err)
+	}
+	if filepath.Base(dir) != devConfigDirectory {
+		t.Fatalf("singleInstanceControlDir() = %q, want base %q", dir, devConfigDirectory)
+	}
+}
+
 func TestWakeRequestLifecycle(t *testing.T) {
 	wakePath := filepath.Join(t.TempDir(), managerWakeFileName)
 

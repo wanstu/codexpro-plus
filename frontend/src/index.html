@@ -11,7 +11,7 @@
 <div class="app-shell" id="app">
     <header class="topbar">
         <div>
-            <p class="eyebrow">CodexPro</p>
+            <p class="eyebrow">CodexPro <span class="build-badge hidden" id="build-badge">DEV</span></p>
             <h1>工作区管理器</h1>
             <p class="subtitle">管理多个独立 codexpro-core 实例。关闭窗口只会隐藏到系统托盘，托盘菜单可真正退出。</p>
         </div>
@@ -26,7 +26,7 @@
             <div class="panel-heading manager-heading">
                 <div>
                     <h2 id="manager-title">管理器状态</h2>
-                    <p>codexpro-core.exe 必须与 codexpro-plus.exe 放在同一目录。</p>
+                    <p>codexpro-core.exe 必须与当前 CodexPro+ 管理器 exe 放在同一目录。</p>
                 </div>
                 <span class="status-pill neutral" id="core-status">正在检查 core…</span>
             </div>
@@ -34,6 +34,10 @@
                 <div class="manager-item">
                     <span class="meta-label">Core 路径</span>
                     <strong class="manager-value path-value" id="core-path">正在检查…</strong>
+                </div>
+                <div class="manager-item">
+                    <span class="meta-label">配置文件</span>
+                    <strong class="manager-value path-value" id="config-path">正在检查…</strong>
                 </div>
                 <label class="switch-row">
                     <input id="manager-auto-start" type="checkbox"/>

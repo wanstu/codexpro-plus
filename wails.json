@@ -1,8 +1,9 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "CodexPro+",
-  "outputfilename": "codexpro-plus",
+  "outputfilename": "codexpro-plus-dev",
   "wailsjsdir": "./frontend",
+  "frontend:build": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ../scripts/generate-app-icon.ps1",
   "author": {
     "name": "wanstu",
     "email": "wanstu@163.com"

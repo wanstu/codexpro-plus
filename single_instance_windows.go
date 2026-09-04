@@ -50,7 +50,7 @@ func acquireInstanceLock(lockPath string) (func(), bool, error) {
 		if errors.Is(err, windows.ERROR_SHARING_VIOLATION) || errors.Is(err, windows.ERROR_LOCK_VIOLATION) {
 			return func() {}, false, nil
 		}
-		return nil, false, fmt.Errorf("获取 CodexPro+ 单实例锁失败: %w", err)
+		return nil, false, fmt.Errorf("获取 %s 单实例锁失败: %w", appDisplayName(), err)
 	}
 
 	released := false
@@ -65,6 +65,13 @@ func acquireInstanceLock(lockPath string) (func(), bool, error) {
 }
 
 func singleInstanceControlDir() (string, error) {
+	if isDevBuild() {
+		configPath, err := DefaultConfigPath()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Dir(configPath), nil
+	}
 	legacyPath, err := legacyConfigPath()
 	if err != nil {
 		return "", err

@@ -85,12 +85,13 @@ Last activity: 2026-09-04 — User manually verified the Phase 4 UX batch and co
 - Token and MCP-link copy actions share one helper and show a transient “复制成功” toast; routine start/stop/save success feedback also uses transient Toast, while the top message area is reserved for persistent errors/warnings/notices.
 - Manager panel now has a “复制链接域名” setting with an explicit note that it does not change core listening behavior.
 - Replaced the temporary `C+` artwork with the dedicated icon set from `assets/icons/`: app branding/favicon uses `codexpro-plus-app.png`, the system tray embeds the optimized transparent `codexpro-plus-tray.png`, and Wails native window/taskbar/exe resources derive from `codexpro-plus-window.png`.
+- Added an isolated local Dev build profile: `codexpro-plus-dev.exe`, `CodexPro+ Dev`, `~/.config/codexpro-plus-dev`, a separate single-instance control directory, and `CodexProPlusDev` Windows auto-start value. Dev never migrates the release config, so it can run beside the GitHub/Release build.
 - README and Phase 4 planning document the new URL behavior and boundary.
 
 ## Verification Status / Risks
 
 1. Repository static analysis recognizes all current Go/JS symbols without parser warnings.
-2. Current UX/MCP-link/icon changes pass `go test ./...`, `node --check frontend/src/main.js`, and a production `wails build` using the new icon set; the produced exe was not launched, so the active CodexPro+ instance was not disturbed. The user had already manually verified the Phase 4 UX and confirmed it works well.
+2. Current UX/MCP-link/icon changes pass `go test ./...`, `node --check frontend/src/main.js`, and production Wails builds. `scripts/build-local.ps1` also successfully produced `build/bin/codexpro-plus-dev.exe` with `-X main.buildProfile=dev`; the script did not launch the exe, so the active release CodexPro+ instance was not disturbed.
 3. Live `@codexprov4-1` verification passed earlier: root/allowed root = `D:\projects\work\wm_group`, port 8600, auth enabled, bash=full, write=workspace, tool=full, inheritEnv=true; CodexPro self-test reported 0 failures.
 4. Runtime diagnosis previously found three simultaneously running managers and split runtime state; current observation now shows only one `codexprov4.exe`, consistent with MGR-01 single-instance behavior.
 5. Wake-request file lifecycle has a Windows unit test. Final manual smoke check remains: hidden primary + repeated `--autostart` stays hidden; normal repeated launch restores/shows the existing window.

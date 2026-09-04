@@ -18,7 +18,6 @@ const (
 	defaultBashMode       = "full"
 	defaultWriteMode      = "workspace"
 	defaultToolMode       = "full"
-	configDirectory       = "codexpro-plus"
 	legacyConfigDirectory = "codexprov4"
 )
 
@@ -76,7 +75,7 @@ func DefaultConfigPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("无法获取用户目录: %w", err)
 	}
-	return filepath.Join(home, ".config", configDirectory, "config.json"), nil
+	return filepath.Join(home, ".config", currentConfigDirectory(), "config.json"), nil
 }
 
 func legacyConfigPath() (string, error) {
@@ -100,8 +99,10 @@ func NewDefaultConfigStore() (*ConfigStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := migrateLegacyConfigIfNeeded(path); err != nil {
-		return nil, err
+	if !isDevBuild() {
+		if err := migrateLegacyConfigIfNeeded(path); err != nil {
+			return nil, err
+		}
 	}
 	return NewConfigStore(path), nil
 }

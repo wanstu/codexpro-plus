@@ -24,6 +24,8 @@ const elements = {
     instanceCount: document.getElementById("instance-count"),
     coreStatus: document.getElementById("core-status"),
     corePath: document.getElementById("core-path"),
+    buildBadge: document.getElementById("build-badge"),
+    configPath: document.getElementById("config-path"),
     managerAutoStart: document.getElementById("manager-auto-start"),
     managerError: document.getElementById("manager-error"),
     domainForm: document.getElementById("domain-form"),
@@ -169,6 +171,13 @@ async function loadRuntime() {
 function renderManagerSettings() {
     const manager = state.manager;
     if (!manager) return;
+
+    const devBuild = manager.build_profile === "dev";
+    elements.buildBadge.classList.toggle("hidden", !devBuild);
+    elements.buildBadge.title = devBuild ? "本地开发构建：配置、单实例锁和自启动项与正式版隔离" : "";
+    document.title = manager.app_name || "CodexPro+";
+    elements.configPath.textContent = manager.config_path || "—";
+    elements.configPath.title = manager.config_path || "";
 
     elements.managerAutoStart.checked = Boolean(manager.auto_start);
     elements.managerAutoStart.disabled = false;
