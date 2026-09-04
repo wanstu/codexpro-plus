@@ -23,13 +23,12 @@ codexpro 的 Windows 原生封装。codexpro 是一个 MCP HTTP 服务，原生�
 - [ ] **WORK-01**: 用户可以添加工作目录（别名 + 路径）
 - [ ] **WORK-02**: 用户可以编辑已添加的工作目录
 - [ ] **WORK-03**: 用户可以删除工作目录
-- [ ] **WORK-04**: 每个工作目录有独立端口（从 8787 起自动递增）
+- [ ] **WORK-04**: 每个工作目录有独立端口（默认从可配置的端口范围自动分配，也可为该目录手动指定端口）
 - [ ] **WORK-05**: 工作目录配置持久化到 `~/.config/codexprov4/config.json`
 - [ ] **PROC-01**: 用户可以启动某个工作目录的服务
 - [ ] **PROC-02**: 用户可以停止某个正在运行的服务
 - [ ] **PROC-03**: 用户可以查看正在运行的进程（别名 / PID / 端口 / 目录）
 - [ ] **PROC-04**: 进程列表里的条目可以被点选
-- [ ] **PROC-05**: 用户可以临时切换某个进程的工作目录（**仅影响运行时，不回写持久化配置**）
 - [ ] **TRAY-01**: 程序常驻系统托盘
 - [ ] **TRAY-02**: 左键点击托盘图标打开主面板
 - [ ] **TRAY-03**: 右键托盘图标有菜单，含「退出」
@@ -39,10 +38,11 @@ codexpro 的 Windows 原生封装。codexpro 是一个 MCP HTTP 服务，原生�
 - [ ] **UI-02**: 所有文字完整显示，**不被截断或遮挡**
 - [ ] **UI-03**: 每个控件的作用**自解释**（不靠用户猜）
 - [ ] **UI-04**: 列表为空时显示引导文案，不是空白
-- [ ] **CLI-01**: 提供命令行接口供脚本调用（add / start / stop / status / url 等）
 
 ### Out of Scope
 
+- **PROC-05 运行时临时切换工作目录** — 已砍（2026-09-04）。一个目录 = 一个实例，要换目录就切到另一个实例；去掉它能少一整类「运行时状态 vs 持久化配置」的边界 bug
+- **CLI-01 命令行接口** — 已砍（2026-09-04）。这是托盘 GUI 工具，没有脚本调用场景；砍掉可省掉参数解析、退出码约定、以及 CLI 一次性命令导致的 Job object 误杀子进程问题
 - 复用 codexprov3 的任何代码 — 该工程 UI 层缺陷过多，已整体废弃
 - 跨平台支持 — 仅 Windows
 - 服务自身的业务逻辑 — 本项目只做进程与配置管理，codexpro 的能力由 codexpro-core 提供
@@ -75,6 +75,7 @@ codexpro 的 Windows 原生封装。codexpro 是一个 MCP HTTP 服务，原生�
 - **Tech stack**: Go 1.26.5 + Wails v2.15.0 — 托盘需原生支持、布局不能手写、中文不能乱码，三者同时满足
 - **Platform**: Windows only（Wails 虽跨平台，本项目不投入跨平台验证）
 - **Compatibility**: 必须与 `codexpro-core.exe`（bun 编译 codexpro 的产物）同目录部署
+- **Port range**: 默认 8800-8899，可在设置中修改；分配时跳过已占用端口，也允许为单个工作目录手动指定端口
 - **Data model**: Workspace（持久化）与 Instance（运行时）严格分离，见下方 Key Decisions
 
 ## Key Decisions
@@ -83,7 +84,9 @@ codexpro 的 Windows 原生封装。codexpro 是一个 MCP HTTP 服务，原生�
 |----------|-----------|---------|
 | Go + Wails 而非 Rust + Win32 | 上一版手写 Win32 控件坐标连续翻车；Wails 用 HTML/CSS 布局 + 内置托盘，从根本上消除布局/文字/编码三类问题 | — Pending |
 | Workspace / Instance 严格分离 | 持久化配置（应该跑什么）与运行时状态（现在跑着什么）是两个语义。混在一起会导致一次临时操作永久改坏用户配置 | — Pending |
-| 临时切换目录不回写配置 | 同上。进程列表里的操作是运行时行为，绝不回写 config.json | — Pending |
+| 端口分配：可配置范围 + 可手动指定 | 2026-09-04 定：默认端口段 8800-8899（避开 Docker Desktop 占着的 8787），可在设置里改；新增目录时从段内自动挑一个空闲端口，也允许为该目录手动写死端口 | — Pending |
+| 砍掉运行时临时换目录（PROC-05） | 一个目录 = 一个实例，换目录即切换实例。保留它只会重新引入「运行时状态污染持久化配置」的边界，而收益不明确 | — Pending |
+| 砍掉 CLI（CLI-01） | 纯托盘 GUI 工具，无脚本调用需求。且 CLI 一次性命令退出会触发 Job object 把刚拉起的 core 一起杀掉，是本类工具的历史坑 | — Pending |
 | 不复用 codexprov3 代码 | UI 层缺陷是结构性的，非局部 bug。带过来只会继承问题 | — Pending |
 | 决策必须写入 .planning/ | 上一版所有设计讨论只存在于对话中，对话一断全部丢失，导致无法回溯「为什么这么写」 | — Pending |
 
@@ -105,4 +108,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-04 after initialization*
+*Last updated: 2026-09-04 after scope decision (砍 PROC-05 / CLI-01，端口可配置范围 + 可手动指定)*
