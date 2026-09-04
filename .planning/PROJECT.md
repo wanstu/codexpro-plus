@@ -12,6 +12,18 @@ codexpro 的 Windows 原生封装。codexpro 是一个 MCP HTTP 服务，原生�
 
 个人工具，自用。无营收模型。
 
+## Current Milestone: v1.0 可用托盘管理器
+
+**Goal:** 交付一个能日常使用的 Windows 托盘应用，让多个 codexpro 工作目录各自独立跑起来，配置持久化且不被运行时操作污染。
+
+**Target features:**
+- 工作目录增删改 + 持久化到 `~/.config/codexprov4/config.json`
+- 端口分配：默认 8800-8899 可配置范围自动挑空闲端口，也允许为单个目录手动指定
+- 进程启停与进程列表（别名 / PID / 端口 / 目录），条目可点选
+- 托盘常驻：左键开面板、右键菜单含「退出」
+- 两级自启：管理器开机自启 + 每个目录单独勾选随管理器拉起
+- 中文 UI：不乱码、不截断、控件自解释、空列表有引导文案
+
 ## Requirements
 
 ### Validated
@@ -108,4 +120,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-04 after scope decision (砍 PROC-05 / CLI-01，端口可配置范围 + 可手动指定)*
+*Last updated: 2026-09-04 after starting milestone v1.0*
