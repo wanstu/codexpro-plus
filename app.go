@@ -2,43 +2,202 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"errors"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// App struct
+type ManagerSettings struct {
+	AutoStart bool   `json:"auto_start"`
+	CoreReady bool   `json:"core_ready"`
+	CorePath  string `json:"core_path"`
+	CoreError string `json:"core_error"`
+	TrayError string `json:"tray_error"`
+}
+
 type App struct {
-	ctx context.Context
+	ctx       context.Context
+	service   *WorkspaceService
+	processes *ProcessManager
+	tray      *TrayManager
+	initErr   error
 }
 
-// NewApp creates a new App application struct
 func NewApp() *App {
-	return &App{}
+	store, err := NewDefaultConfigStore()
+	app := &App{initErr: err}
+	if err == nil {
+		app.service = NewWorkspaceService(store)
+		app.processes = NewProcessManager(app.service)
+	}
+	return app
 }
 
-// startup is called at application startup
+func (a *App) attachTray(icon []byte) {
+	if a == nil {
+		return
+	}
+	a.tray = NewTrayManager(a, icon)
+}
+
 func (a *App) startup(ctx context.Context) {
-	// Perform your setup here
 	a.ctx = ctx
+	go watchSingleInstanceWake(ctx, a.showMainWindow)
+	if a.processes != nil {
+		go a.processes.StartConfiguredWorkspaces()
+	}
 }
 
-// domReady is called after front-end resources have been loaded
-func (a App) domReady(ctx context.Context) {
-	// Add your action here
+func (a *App) domReady(ctx context.Context) {
+	a.ctx = ctx
+	if a.tray != nil {
+		a.tray.Start()
+	}
 }
 
-// beforeClose is called when the application is about to quit,
-// either by clicking the window close button or calling runtime.Quit.
-// Returning true will cause the application to continue, false will continue shutdown as normal.
-func (a *App) beforeClose(ctx context.Context) (prevent bool) {
-	return false
-}
-
-// shutdown is called at application termination
 func (a *App) shutdown(ctx context.Context) {
-	// Perform your teardown here
+	if a.processes != nil {
+		_ = a.processes.StopAll()
+	}
+	if a.tray != nil {
+		a.tray.Stop()
+	}
 }
 
-// Greet returns a greeting for the given name
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, It's show time!", name)
+func (a *App) GetConfig() (Config, error) {
+	if err := a.ready(); err != nil {
+		return Config{}, err
+	}
+	return a.service.GetConfig()
+}
+
+func (a *App) AddWorkspace(input WorkspaceInput) (Workspace, error) {
+	if err := a.ready(); err != nil {
+		return Workspace{}, err
+	}
+	return a.service.AddWorkspace(input)
+}
+
+func (a *App) UpdateWorkspace(id string, input WorkspaceInput) (Workspace, error) {
+	if err := a.ready(); err != nil {
+		return Workspace{}, err
+	}
+	if a.processes.IsRunning(id) {
+		return Workspace{}, errors.New("该工作目录正在运行，请先停止服务再编辑")
+	}
+	return a.service.UpdateWorkspace(id, input)
+}
+
+func (a *App) DeleteWorkspace(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	if a.processes.IsRunning(id) {
+		return errors.New("该工作目录正在运行，请先停止服务再删除")
+	}
+	return a.service.DeleteWorkspace(id)
+}
+
+func (a *App) UpdatePortRange(portRange PortRange) (Config, error) {
+	if err := a.ready(); err != nil {
+		return Config{}, err
+	}
+	return a.service.UpdatePortRange(portRange)
+}
+
+func (a *App) StartWorkspace(id string) (Instance, error) {
+	if err := a.ready(); err != nil {
+		return Instance{}, err
+	}
+	return a.processes.Start(id)
+}
+
+func (a *App) StopWorkspace(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.processes.Stop(id)
+}
+
+func (a *App) GetInstances() ([]Instance, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	return a.processes.ListInstances(), nil
+}
+
+func (a *App) GetRuntimeStates() ([]RuntimeState, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	return a.processes.RuntimeStates(), nil
+}
+
+func (a *App) GetWorkspaceLog(id string) (string, error) {
+	if err := a.ready(); err != nil {
+		return "", err
+	}
+	return a.processes.ReadLog(id)
+}
+
+func (a *App) GetManagerSettings() (ManagerSettings, error) {
+	if err := a.ready(); err != nil {
+		return ManagerSettings{}, err
+	}
+	autoStart, err := managerAutoStartEnabled()
+	if err != nil {
+		return ManagerSettings{}, err
+	}
+	settings := ManagerSettings{AutoStart: autoStart}
+	if path, err := a.processes.CorePath(); err != nil {
+		settings.CoreError = err.Error()
+	} else {
+		settings.CoreReady = true
+		settings.CorePath = path
+	}
+	if a.tray != nil {
+		settings.TrayError = a.tray.LastError()
+	}
+	return settings, nil
+}
+
+func (a *App) SetManagerAutoStart(enabled bool) (ManagerSettings, error) {
+	if err := a.ready(); err != nil {
+		return ManagerSettings{}, err
+	}
+	if err := setManagerAutoStart(enabled); err != nil {
+		return ManagerSettings{}, err
+	}
+	return a.GetManagerSettings()
+}
+
+func (a *App) showMainWindow() {
+	if a == nil || a.ctx == nil {
+		return
+	}
+	runtime.WindowUnminimise(a.ctx)
+	runtime.Show(a.ctx)
+}
+
+func (a *App) quitApplication() {
+	if a == nil || a.ctx == nil {
+		return
+	}
+	runtime.Quit(a.ctx)
+}
+
+func (a *App) ready() error {
+	if a == nil {
+		return errors.New("应用未初始化")
+	}
+	if a.initErr != nil {
+		return a.initErr
+	}
+	if a.service == nil {
+		return errors.New("配置服务未初始化")
+	}
+	if a.processes == nil {
+		return errors.New("进程管理器未初始化")
+	}
+	return nil
 }

@@ -2,6 +2,8 @@ package main
 
 import (
 	"embed"
+	"os"
+	"strings"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -11,20 +13,44 @@ import (
 //go:embed all:frontend/src
 var assets embed.FS
 
-func main() {
-	// Create an instance of the app structure
-	app := NewApp()
+//go:embed frontend/src/assets/images/logo-universal.png
+var trayIcon []byte
 
-	// Create application with options
-	err := wails.Run(&options.App{
-		Title:  "codexprov4",
-		Width:  1024,
-		Height: 768,
+func main() {
+	releaseInstance, primary, err := acquireSingleInstance()
+	if err != nil {
+		println("Error:", err.Error())
+		return
+	}
+	if !primary {
+		if !launchedFromAutoStart() {
+			_ = requestExistingInstanceWindow()
+		}
+		return
+	}
+	defer releaseInstance()
+	if err := prepareSingleInstanceWake(); err != nil {
+		println("Warning:", err.Error())
+	}
+
+	app := NewApp()
+	app.attachTray(trayIcon)
+
+	err = wails.Run(&options.App{
+		Title:             "CodexPro 工作区管理器",
+		Width:             1120,
+		Height:            820,
+		MinWidth:          820,
+		MinHeight:         620,
+		StartHidden:       launchedFromAutoStart(),
+		HideWindowOnClose: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+		BackgroundColour: &options.RGBA{R: 244, G: 247, B: 251, A: 1},
 		OnStartup:        app.startup,
+		OnDomReady:       app.domReady,
+		OnShutdown:       app.shutdown,
 		Bind: []interface{}{
 			app,
 		},
@@ -33,4 +59,13 @@ func main() {
 	if err != nil {
 		println("Error:", err.Error())
 	}
+}
+
+func launchedFromAutoStart() bool {
+	for _, arg := range os.Args[1:] {
+		if strings.EqualFold(strings.TrimSpace(arg), "--autostart") {
+			return true
+		}
+	}
+	return false
 }

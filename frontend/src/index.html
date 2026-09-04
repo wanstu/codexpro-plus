@@ -1,21 +1,225 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>codexprov4</title>
+    <title>CodexPro 工作区管理器</title>
     <link href="/main.css" rel="stylesheet"/>
 </head>
-
 <body>
-<div class="app" id="app">
-    <div class="logo"></div>
-    <div class="result" id="result">Please enter your name below 👇</div>
-    <div class="input-box" id="input">
-        <input autocomplete="off" class="input" id="name" type="text"/>
-        <button class="btn" onclick="greet()">Greet</button>
-    </div>
+<div class="app-shell" id="app">
+    <header class="topbar">
+        <div>
+            <p class="eyebrow">CodexPro</p>
+            <h1>工作区管理器</h1>
+            <p class="subtitle">管理多个独立 codexpro-core 实例。关闭窗口只会隐藏到系统托盘，托盘菜单可真正退出。</p>
+        </div>
+        <button class="button primary" id="add-workspace-button" type="button">添加工作目录</button>
+    </header>
+
+    <div aria-live="polite" class="message hidden" id="message" role="status"></div>
+
+    <main class="content">
+        <section class="panel manager-panel" aria-labelledby="manager-title">
+            <div class="panel-heading manager-heading">
+                <div>
+                    <h2 id="manager-title">管理器状态</h2>
+                    <p>codexpro-core 必须与 codexprov4.exe 放在同一目录。</p>
+                </div>
+                <span class="status-pill neutral" id="core-status">正在检查 core…</span>
+            </div>
+            <div class="manager-grid">
+                <div class="manager-item">
+                    <span class="meta-label">Core 路径</span>
+                    <strong class="manager-value path-value" id="core-path">正在检查…</strong>
+                </div>
+                <label class="switch-row">
+                    <input id="manager-auto-start" type="checkbox"/>
+                    <span>
+                        <strong>Windows 开机自启</strong>
+                        <small>启用后以托盘隐藏模式启动管理器；勾选“随管理器启动”的 Workspace 会自动拉起。</small>
+                    </span>
+                </label>
+            </div>
+            <div class="inline-error hidden" id="manager-error"></div>
+        </section>
+
+        <section class="panel instance-panel" aria-labelledby="instance-title">
+            <div class="panel-heading">
+                <div>
+                    <h2 id="instance-title">运行实例</h2>
+                    <p id="instance-count">正在读取运行状态…</p>
+                </div>
+            </div>
+            <div class="instance-list" id="instance-list"></div>
+            <div class="compact-empty hidden" id="instance-empty">当前没有正在运行的 codexpro-core 实例。可在下方工作目录中点击“启动”。</div>
+        </section>
+
+        <section class="panel port-panel" aria-labelledby="port-range-title">
+            <div class="panel-heading">
+                <div>
+                    <h2 id="port-range-title">自动端口范围</h2>
+                    <p>新增工作目录选择“自动分配”时，会从这个范围中寻找第一个可用端口。</p>
+                </div>
+            </div>
+            <form class="port-range-form" id="port-range-form">
+                <label>
+                    <span>起始端口</span>
+                    <input id="port-start" min="1" max="65535" required type="number" inputmode="numeric"/>
+                </label>
+                <span class="range-separator" aria-hidden="true">—</span>
+                <label>
+                    <span>结束端口</span>
+                    <input id="port-end" min="1" max="65535" required type="number" inputmode="numeric"/>
+                </label>
+                <button class="button secondary" type="submit">保存端口范围</button>
+            </form>
+            <p class="hint">修改范围只影响后续自动分配，不会改写已有工作目录的端口。</p>
+        </section>
+
+        <section class="workspace-section" aria-labelledby="workspace-title">
+            <div class="section-heading">
+                <div>
+                    <h2 id="workspace-title">工作目录</h2>
+                    <p id="workspace-count">正在加载…</p>
+                </div>
+            </div>
+
+            <div class="workspace-grid" id="workspace-list"></div>
+
+            <div class="empty-state hidden" id="empty-state">
+                <div class="empty-icon" aria-hidden="true">＋</div>
+                <h3>还没有工作目录</h3>
+                <p>添加第一个目录后，可独立启动一个 codexpro-core 实例，并查看它的 PID、端口和日志。</p>
+                <button class="button primary" id="empty-add-button" type="button">添加工作目录</button>
+            </div>
+        </section>
+    </main>
 </div>
+
+<dialog class="workspace-dialog" id="workspace-dialog">
+    <form id="workspace-form">
+        <div class="dialog-heading">
+            <div>
+                <p class="eyebrow">Workspace</p>
+                <h2 id="dialog-title">添加工作目录</h2>
+            </div>
+            <button aria-label="关闭" class="icon-button" id="dialog-close-button" type="button">×</button>
+        </div>
+
+        <div aria-live="polite" class="message hidden" id="dialog-message" role="status"></div>
+
+        <div class="form-grid">
+            <label class="full-width">
+                <span>别名</span>
+                <input autocomplete="off" id="workspace-alias" maxlength="80" placeholder="例如：wm_main" required type="text"/>
+                <small>用于列表中识别这个工作目录。</small>
+            </label>
+
+            <label class="full-width">
+                <span>工作目录路径</span>
+                <input autocomplete="off" id="workspace-path" placeholder="例如：D:\projects\work\wm_group\wm_main" required type="text"/>
+                <small>必须填写已经存在的 Windows 绝对目录。</small>
+            </label>
+
+            <fieldset class="full-width port-mode-fieldset">
+                <legend>端口分配方式</legend>
+                <label class="radio-card">
+                    <input checked name="port-mode" type="radio" value="auto"/>
+                    <span>
+                        <strong>自动分配</strong>
+                        <small>从当前自动端口范围中选择第一个空闲端口。</small>
+                    </span>
+                </label>
+                <label class="radio-card">
+                    <input name="port-mode" type="radio" value="manual"/>
+                    <span>
+                        <strong>手动指定</strong>
+                        <small>使用你指定的端口；若已被其他目录或系统进程占用会拒绝保存。</small>
+                    </span>
+                </label>
+            </fieldset>
+
+            <label class="full-width hidden" id="manual-port-field">
+                <span>手动端口</span>
+                <input id="workspace-port" min="1" max="65535" type="number" inputmode="numeric"/>
+                <small id="port-help">端口必须在 1-65535 之间。</small>
+            </label>
+
+            <fieldset class="full-width codex-settings-fieldset">
+                <legend>CodexPro 启动参数</legend>
+                <div class="codex-settings-grid">
+                    <label class="full-width">
+                        <span>HTTP Token</span>
+                        <input autocomplete="off" id="workspace-token" minlength="24" placeholder="留空自动生成 32 字节随机 Token" type="text"/>
+                        <small>至少 24 字节。编辑时留空会保留当前 Token。</small>
+                    </label>
+                    <label>
+                        <span>Bash 模式</span>
+                        <select id="workspace-bash-mode">
+                            <option value="off">off</option>
+                            <option value="safe">safe</option>
+                            <option selected value="full">full</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Write 模式</span>
+                        <select id="workspace-write-mode">
+                            <option value="off">off</option>
+                            <option value="handoff">handoff</option>
+                            <option selected value="workspace">workspace</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Tool 模式</span>
+                        <select id="workspace-tool-mode">
+                            <option value="minimal">minimal</option>
+                            <option value="standard">standard</option>
+                            <option selected value="full">full</option>
+                        </select>
+                    </label>
+                    <label class="checkbox-row compact-checkbox">
+                        <input checked id="workspace-inherit-env" type="checkbox"/>
+                        <span>
+                            <strong>继承系统环境</strong>
+                            <small>向 core 传入 CODEXPRO_INHERIT_ENV=1。</small>
+                        </span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <label class="checkbox-row full-width">
+                <input id="workspace-auto-start" type="checkbox"/>
+                <span>
+                    <strong>随管理器启动</strong>
+                    <small>每次 codexprov4 启动时自动拉起该 Workspace；单个启动失败不会影响其他目录。</small>
+                </span>
+            </label>
+        </div>
+
+        <div class="dialog-actions">
+            <button class="button ghost" id="dialog-cancel-button" type="button">取消</button>
+            <button class="button primary" id="workspace-submit-button" type="submit">保存</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog class="log-dialog" id="log-dialog">
+    <div class="dialog-heading">
+        <div>
+            <p class="eyebrow">Runtime Log</p>
+            <h2 id="log-title">运行日志</h2>
+        </div>
+        <button aria-label="关闭" class="icon-button" id="log-close-button" type="button">×</button>
+    </div>
+    <p class="log-path" id="log-path"></p>
+    <pre class="log-output" id="log-output">正在读取日志…</pre>
+    <div class="dialog-actions">
+        <button class="button ghost" id="log-refresh-button" type="button">刷新日志</button>
+        <button class="button primary" id="log-done-button" type="button">完成</button>
+    </div>
+</dialog>
+
 <script src="/main.js"></script>
 </body>
 </html>

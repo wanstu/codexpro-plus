@@ -28,28 +28,29 @@ codexpro 的 Windows 原生封装。codexpro 是一个 MCP HTTP 服务，原生�
 
 ### Validated
 
-(None yet — 这是重写工程，上一版 codexprov3 的代码已废弃不复用)
+- [x] **WORK-01**: 用户可以添加工作目录（别名 + 路径）— Phase 1
+- [x] **WORK-02**: 用户可以编辑已添加的工作目录 — Phase 1
+- [x] **WORK-03**: 用户可以删除工作目录 — Phase 1
+- [x] **WORK-04**: 每个工作目录有独立端口（默认从可配置的端口范围自动分配，也可为该目录手动指定端口）— Phase 1
+- [x] **WORK-05**: 工作目录配置持久化到 `~/.config/codexprov4/config.json` — Phase 1
+- [x] **UI-04**: 列表为空时显示引导文案，不是空白 — Phase 1
 
 ### Active
 
-- [ ] **WORK-01**: 用户可以添加工作目录（别名 + 路径）
-- [ ] **WORK-02**: 用户可以编辑已添加的工作目录
-- [ ] **WORK-03**: 用户可以删除工作目录
-- [ ] **WORK-04**: 每个工作目录有独立端口（默认从可配置的端口范围自动分配，也可为该目录手动指定端口）
-- [ ] **WORK-05**: 工作目录配置持久化到 `~/.config/codexprov4/config.json`
 - [ ] **PROC-01**: 用户可以启动某个工作目录的服务
 - [ ] **PROC-02**: 用户可以停止某个正在运行的服务
 - [ ] **PROC-03**: 用户可以查看正在运行的进程（别名 / PID / 端口 / 目录）
 - [ ] **PROC-04**: 进程列表里的条目可以被点选
+- [ ] **CORE-01**: 每个 Workspace 可以独立配置 CodexPro 启动参数（Token / Bash Mode / Write Mode / Tool Mode / Inherit Env）
 - [ ] **TRAY-01**: 程序常驻系统托盘
 - [ ] **TRAY-02**: 左键点击托盘图标打开主面板
 - [ ] **TRAY-03**: 右键托盘图标有菜单，含「退出」
 - [ ] **AUTO-01**: 管理器本身可以设置为开机自启动
 - [ ] **AUTO-02**: 每个工作目录可单独勾选是否随管理器自动拉起
+- [ ] **MGR-01**: codexprov4 管理器本身必须单实例运行；普通重复启动唤醒已有主窗口，`--autostart` 重复启动静默退出，避免多个 ProcessManager 导致 Workspace 运行状态分裂
 - [ ] **UI-01**: 界面文案全部中文，且**不出现乱码**
 - [ ] **UI-02**: 所有文字完整显示，**不被截断或遮挡**
 - [ ] **UI-03**: 每个控件的作用**自解释**（不靠用户猜）
-- [ ] **UI-04**: 列表为空时显示引导文案，不是空白
 
 ### Out of Scope
 
@@ -71,9 +72,10 @@ codexpro 的 Windows 原生封装。codexpro 是一个 MCP HTTP 服务，原生�
 
 **根因：** 手写 Win32 控件坐标 + 逐个调 API 的方式，每次改动都会引入新的布局/文字问题。本次改用 HTML/CSS 布局，从根本上消除这类问题。
 
-**技术栈决策：** Go + Wails。
-- 选 Wails 是因为：托盘内置（`SetSystemTray`）、布局用 HTML/CSS（flex，不用手算坐标）、中文天然 UTF-8 无编码问题、产物单文件约 10MB
-- 曾评估并否决：fltk（**无系统托盘组件**，核心需求撑不起来）、PySide6（打包约 50MB）、Tauri（需 Node/bun 工具链，产物更大）、Go+原生 Win32（布局仍要手写，会重蹈覆辙）
+**技术栈决策：** Go + Wails v2 + 独立 Windows system tray。
+- 选 Wails 是因为：主界面可用 HTML/CSS（flex/grid，不用手算坐标）、中文天然 UTF-8、Go 侧方便管理本地进程，且 Windows 单 EXE 发布路径简单。
+- 2026-09-04 Phase 3 校正：Wails v2.15 并没有受支持的内置系统托盘 API；托盘改由纯 Go `github.com/gogpu/systray` 提供，Wails 继续负责主窗口，不为托盘整体迁移 Wails v3。
+- 曾评估并否决：fltk（系统托盘能力不足以支撑当前方案）、PySide6（打包较大）、Tauri（增加 Node/Rust 工具链）、Go+原生 Win32（主界面布局仍要手写，会重蹈覆辙）。
 
 **上一版积累的、与 UI 无关的经验（这些仍然是有效的）：**
 - token 必须 ≥24 字节，否则 codexpro 直接退出（用 32 字节 hex）
@@ -84,7 +86,7 @@ codexpro 的 Windows 原生封装。codexpro 是一个 MCP HTTP 服务，原生�
 
 ## Constraints
 
-- **Tech stack**: Go 1.26.5 + Wails v2.15.0 — 托盘需原生支持、布局不能手写、中文不能乱码，三者同时满足
+- **Tech stack**: Go 1.26.5 + Wails v2.15.0 + `github.com/gogpu/systray` — Wails 负责 HTML/CSS 主窗口，独立 systray 负责 Windows 托盘；中文统一 UTF-8
 - **Platform**: Windows only（Wails 虽跨平台，本项目不投入跨平台验证）
 - **Compatibility**: 必须与 `codexpro-core.exe`（bun 编译 codexpro 的产物）同目录部署
 - **Port range**: 默认 8800-8899，可在设置中修改；分配时跳过已占用端口，也允许为单个工作目录手动指定端口
@@ -94,7 +96,7 @@ codexpro 的 Windows 原生封装。codexpro 是一个 MCP HTTP 服务，原生�
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Go + Wails 而非 Rust + Win32 | 上一版手写 Win32 控件坐标连续翻车；Wails 用 HTML/CSS 布局 + 内置托盘，从根本上消除布局/文字/编码三类问题 | — Pending |
+| Go + Wails v2 + gogpu/systray，而非 Rust + Win32 | Wails 负责 HTML/CSS 主界面与 UTF-8；Wails v2 无受支持托盘 API，因此 Phase 3 用纯 Go systray 补 Windows 托盘，同时避免迁移框架 | Implementing in Phase 3 |
 | Workspace / Instance 严格分离 | 持久化配置（应该跑什么）与运行时状态（现在跑着什么）是两个语义。混在一起会导致一次临时操作永久改坏用户配置 | — Pending |
 | 端口分配：可配置范围 + 可手动指定 | 2026-09-04 定：默认端口段 8800-8899（避开 Docker Desktop 占着的 8787），可在设置里改；新增目录时从段内自动挑一个空闲端口，也允许为该目录手动写死端口 | — Pending |
 | 砍掉运行时临时换目录（PROC-05） | 一个目录 = 一个实例，换目录即切换实例。保留它只会重新引入「运行时状态污染持久化配置」的边界，而收益不明确 | — Pending |
