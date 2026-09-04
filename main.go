@@ -13,7 +13,7 @@ import (
 //go:embed all:frontend/src
 var assets embed.FS
 
-//go:embed frontend/src/assets/images/appicon.png
+//go:embed frontend/src/assets/images/tray-icon.png
 var trayIcon []byte
 
 func main() {

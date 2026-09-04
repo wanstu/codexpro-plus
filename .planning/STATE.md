@@ -19,7 +19,7 @@ progress:
 
 Phase: 4 of 4 — UX / 稳定性 / 发布验证
 Plan: 04-01
-Status: Release candidate; Phase 4 copy/domain/MCP-link/toast/icon UX has passed user manual verification; release packaging checks remain
+Status: Release candidate; Phase 4 UX is user-verified and the dedicated icon set passes production build; ready for RC2 tag
 Last activity: 2026-09-04 — User manually verified the Phase 4 UX batch and confirmed it works well
 
 ## Planning Artifacts
@@ -84,13 +84,13 @@ Last activity: 2026-09-04 — User manually verified the Phase 4 UX batch and co
 - Workspace cards now show a masked full MCP URL and provide “打开” + “复制链接”; the generated URL includes `/mcp` plus the Workspace Token query, and the standalone “复制端口” action has been removed.
 - Token and MCP-link copy actions share one helper and show a transient “复制成功” toast; routine start/stop/save success feedback also uses transient Toast, while the top message area is reserved for persistent errors/warnings/notices.
 - Manager panel now has a “复制链接域名” setting with an explicit note that it does not change core listening behavior.
-- Added a dedicated CodexPro+ `C+` application icon: `build/appicon.png` is the Windows build source and the tray embeds the matching frontend icon; the stale Wails default `icon.ico` is removed so the next build regenerates it.
+- Replaced the temporary `C+` artwork with the dedicated icon set from `assets/icons/`: app branding/favicon uses `codexpro-plus-app.png`, the system tray embeds `codexpro-plus-tray.png`, and Wails native window/taskbar/exe resources derive from `codexpro-plus-window.png`.
 - README and Phase 4 planning document the new URL behavior and boundary.
 
 ## Verification Status / Risks
 
 1. Repository static analysis recognizes all current Go/JS symbols without parser warnings.
-2. Current UX/MCP-link/icon changes pass `go test ./...` and `node --check frontend/src/main.js`; the user has also manually verified the current build and confirmed the Phase 4 UX works well. Future automated verification must not launch the produced exe while the active CodexPro+ instance is in use.
+2. Current UX/MCP-link/icon changes pass `go test ./...`, `node --check frontend/src/main.js`, and a production `wails build` using the new icon set; the produced exe was not launched, so the active CodexPro+ instance was not disturbed. The user had already manually verified the Phase 4 UX and confirmed it works well.
 3. Live `@codexprov4-1` verification passed earlier: root/allowed root = `D:\projects\work\wm_group`, port 8600, auth enabled, bash=full, write=workspace, tool=full, inheritEnv=true; CodexPro self-test reported 0 failures.
 4. Runtime diagnosis previously found three simultaneously running managers and split runtime state; current observation now shows only one `codexprov4.exe`, consistent with MGR-01 single-instance behavior.
 5. Wake-request file lifecycle has a Windows unit test. Final manual smoke check remains: hidden primary + repeated `--autostart` stays hidden; normal repeated launch restores/shows the existing window.
@@ -98,8 +98,8 @@ Last activity: 2026-09-04 — User manually verified the Phase 4 UX batch and co
 
 ## Next Action
 
-1. Commit the user-verified Phase 4 UX/MCP-link/icon batch.
-2. Reconfirm ordinary repeated launch restores the existing hidden window and repeated `--autostart` remains silent.
-3. Verify the GitHub Actions Windows workflow / release artifact after the next push.
-4. Decide whether the next tag should be `v1.0.0-rc2` or final `v1.0.0`.
+1. Commit the dedicated CodexPro+ icon-set integration on top of the verified Phase 4 UX commit.
+2. Create annotated tag `v1.0.0-rc2` on that commit.
+3. Push `master` and `v1.0.0-rc2`, then verify the GitHub Actions Windows release artifact.
+4. If RC2 remains stable in real use, promote the same release line to final `v1.0.0` without adding new features.
 
