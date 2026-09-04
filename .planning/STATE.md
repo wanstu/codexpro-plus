@@ -84,7 +84,7 @@ Last activity: 2026-09-04 — User manually verified the Phase 4 UX batch and co
 - Workspace cards now show a masked full MCP URL and provide “打开” + “复制链接”; the generated URL includes `/mcp` plus the Workspace Token query, and the standalone “复制端口” action has been removed.
 - Token and MCP-link copy actions share one helper and show a transient “复制成功” toast; routine start/stop/save success feedback also uses transient Toast, while the top message area is reserved for persistent errors/warnings/notices.
 - Manager panel now has a “复制链接域名” setting with an explicit note that it does not change core listening behavior.
-- Replaced the temporary `C+` artwork with the dedicated icon set from `assets/icons/`: app branding/favicon uses `codexpro-plus-app.png`, the system tray embeds `codexpro-plus-tray.png`, and Wails native window/taskbar/exe resources derive from `codexpro-plus-window.png`.
+- Replaced the temporary `C+` artwork with the dedicated icon set from `assets/icons/`: app branding/favicon uses `codexpro-plus-app.png`, the system tray embeds the optimized transparent `codexpro-plus-tray.png`, and Wails native window/taskbar/exe resources derive from `codexpro-plus-window.png`.
 - README and Phase 4 planning document the new URL behavior and boundary.
 
 ## Verification Status / Risks
@@ -98,8 +98,8 @@ Last activity: 2026-09-04 — User manually verified the Phase 4 UX batch and co
 
 ## Next Action
 
-1. Commit the dedicated CodexPro+ icon-set integration on top of the verified Phase 4 UX commit.
-2. Create annotated tag `v1.0.0-rc2` on that commit.
-3. Push `master` and `v1.0.0-rc2`, then verify the GitHub Actions Windows release artifact.
-4. If RC2 remains stable in real use, promote the same release line to final `v1.0.0` without adding new features.
+1. Push `master` and `v1.0.0-rc2`.
+2. Verify the GitHub Actions Windows release build and `CodexProPlus-windows-amd64.zip` artifact.
+3. Use RC2 in real work without adding new features.
+4. If RC2 remains stable, promote the release line to final `v1.0.0`.
 
