@@ -37,7 +37,7 @@ func main() {
 	app.attachTray(trayIcon)
 
 	err = wails.Run(&options.App{
-		Title:             "CodexPro 工作区管理器",
+		Title:             "CodexPro+",
 		Width:             1120,
 		Height:            820,
 		MinWidth:          820,

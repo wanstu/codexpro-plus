@@ -1,4 +1,4 @@
-# Roadmap — codexprov4 v1.0 可用托盘管理器
+# Roadmap — CodexPro+ v1.0 可用托盘管理器
 
 ## Milestone Goal
 
@@ -12,7 +12,7 @@
 
 **Scope:**
 - 定义持久化 `Workspace` / `Config` 数据模型，保持与后续运行时 `Instance` 模型分离。
-- 配置文件固定为 `~/.config/codexprov4/config.json`，首次启动自动创建默认配置。
+- 配置文件固定为 `~/.config/codexpro-plus/config.json`，首次启动自动创建；若只存在旧 `~/.config/codexprov4/config.json` 则自动复制迁移并保留旧文件。
 - 默认端口范围 8800-8899；自动分配跳过配置中已占用端口和系统当前已监听端口。
 - 单个 Workspace 支持手动端口；新增/编辑时做目录、别名、端口冲突与范围校验。
 - 提供前端可调用的增删改查接口。
@@ -65,7 +65,7 @@
 - 左键托盘图标打开/聚焦主面板。
 - 右键托盘菜单至少包含“打开”和“退出”。
 - 关闭主窗口默认隐藏到托盘，不等价于退出。
-- 管理器强制单实例；重复启动 codexprov4 时不得创建第二个 ProcessManager。
+- 管理器强制单实例；重复启动 CodexPro+ 时不得创建第二个 ProcessManager。
 - 管理器开机自启开关。
 - 每个 Workspace 持久化 `auto_start` 配置；管理器启动后按配置拉起实例。
 - 自启失败时保留其他 Workspace 的启动流程，并在 UI 中显示失败原因。

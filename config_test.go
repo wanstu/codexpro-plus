@@ -120,6 +120,48 @@ func TestConfigStoreMigratesV1WorkspaceToken(t *testing.T) {
 	}
 }
 
+func TestMigrateConfigFileIfNeededCopiesLegacyWithoutDeletingIt(t *testing.T) {
+	root := t.TempDir()
+	oldPath := filepath.Join(root, legacyConfigDirectory, "config.json")
+	newPath := filepath.Join(root, configDirectory, "config.json")
+	legacy := []byte(`{"version":2,"port_range":{"start":8800,"end":8899},"workspaces":[]}`)
+	if err := os.MkdirAll(filepath.Dir(oldPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(oldPath, legacy, 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	if err := migrateConfigFileIfNeeded(newPath, oldPath); err != nil {
+		t.Fatalf("migrateConfigFileIfNeeded() error = %v", err)
+	}
+	newData, err := os.ReadFile(newPath)
+	if err != nil {
+		t.Fatalf("ReadFile(new) error = %v", err)
+	}
+	if string(newData) != string(legacy) {
+		t.Fatalf("new config = %q, want %q", newData, legacy)
+	}
+	if _, err := os.Stat(oldPath); err != nil {
+		t.Fatalf("legacy config should remain for rollback: %v", err)
+	}
+
+	newer := []byte(`{"version":3,"port_range":{"start":9000,"end":9001},"workspaces":[]}`)
+	if err := os.WriteFile(newPath, newer, 0o600); err != nil {
+		t.Fatalf("WriteFile(newer) error = %v", err)
+	}
+	if err := migrateConfigFileIfNeeded(newPath, oldPath); err != nil {
+		t.Fatalf("second migrateConfigFileIfNeeded() error = %v", err)
+	}
+	got, err := os.ReadFile(newPath)
+	if err != nil {
+		t.Fatalf("ReadFile(newer) error = %v", err)
+	}
+	if string(got) != string(newer) {
+		t.Fatal("existing new config was overwritten by legacy config")
+	}
+}
+
 func TestConfigStoreMalformedJSONDoesNotOverwriteFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
 	bad := []byte(`{"version":1,"port_range":`)

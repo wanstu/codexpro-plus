@@ -1,0 +1,97 @@
+name: Windows CI
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    tags:
+      - "v*"
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      CODEXPRO_REF: 587f7fd3a4644a847bba13aeb49336056052e1f6
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.26.5"
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: Install Wails CLI
+        shell: pwsh
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
+
+      - name: Run Go tests
+        shell: pwsh
+        run: go test ./...
+
+      - name: Build CodexPro core
+        shell: pwsh
+        run: .\scripts\build-codexpro-core.ps1 -Ref $env:CODEXPRO_REF
+
+      - name: Build CodexPro+ manager
+        shell: pwsh
+        run: |
+          $wails = Join-Path (go env GOPATH) "bin\wails.exe"
+          & $wails build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify release files
+        shell: pwsh
+        run: |
+          $files = @(
+            "build\bin\codexpro-plus.exe",
+            "build\bin\codexpro-core.exe"
+          )
+          foreach ($file in $files) {
+            if (-not (Test-Path $file)) {
+              throw "Missing release file: $file"
+            }
+            Get-Item $file | Select-Object Name, Length, LastWriteTime
+          }
+
+      - name: Package Windows release
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Force `
+            -Path build\bin\codexpro-plus.exe,build\bin\codexpro-core.exe `
+            -DestinationPath dist\CodexProPlus-windows-amd64.zip
+
+      - name: Upload CI artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: CodexProPlus-windows-amd64
+          path: dist/CodexProPlus-windows-amd64.zip
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          name: CodexPro+ ${{ github.ref_name }}
+          files: dist/CodexProPlus-windows-amd64.zip
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

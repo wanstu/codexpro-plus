@@ -12,12 +12,13 @@ import (
 )
 
 const (
-	managerRunKeyPath = `Software\Microsoft\Windows\CurrentVersion\Run`
-	managerRunValue   = "CodexProV4"
+	managerRunKeyPath     = `Software\Microsoft\Windows\CurrentVersion\Run`
+	managerRunValue       = "CodexProPlus"
+	legacyManagerRunValue = "CodexProV4"
 )
 
 func managerAutoStartEnabled() (bool, error) {
-	key, err := registry.OpenKey(registry.CURRENT_USER, managerRunKeyPath, registry.QUERY_VALUE)
+	key, err := registry.OpenKey(registry.CURRENT_USER, managerRunKeyPath, registry.QUERY_VALUE|registry.SET_VALUE)
 	if errors.Is(err, registry.ErrNotExist) {
 		return false, nil
 	}
@@ -26,18 +27,31 @@ func managerAutoStartEnabled() (bool, error) {
 	}
 	defer key.Close()
 
-	value, _, err := key.GetStringValue(managerRunValue)
-	if errors.Is(err, registry.ErrNotExist) {
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("读取开机自启配置失败: %w", err)
-	}
 	expected, err := managerAutoStartCommand()
 	if err != nil {
 		return false, err
 	}
-	return strings.EqualFold(strings.TrimSpace(value), expected), nil
+
+	value, _, err := key.GetStringValue(managerRunValue)
+	if err == nil {
+		return strings.EqualFold(strings.TrimSpace(value), expected), nil
+	}
+	if !errors.Is(err, registry.ErrNotExist) {
+		return false, fmt.Errorf("读取开机自启配置失败: %w", err)
+	}
+
+	if _, _, err := key.GetStringValue(legacyManagerRunValue); err != nil {
+		if errors.Is(err, registry.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("读取旧版开机自启配置失败: %w", err)
+	}
+
+	if err := key.SetStringValue(managerRunValue, expected); err != nil {
+		return false, fmt.Errorf("迁移开机自启配置失败: %w", err)
+	}
+	_ = key.DeleteValue(legacyManagerRunValue)
+	return true, nil
 }
 
 func setManagerAutoStart(enabled bool) error {
@@ -50,8 +64,10 @@ func setManagerAutoStart(enabled bool) error {
 			return fmt.Errorf("打开开机自启配置失败: %w", err)
 		}
 		defer key.Close()
-		if err := key.DeleteValue(managerRunValue); err != nil && !errors.Is(err, registry.ErrNotExist) {
-			return fmt.Errorf("关闭开机自启失败: %w", err)
+		for _, name := range []string{managerRunValue, legacyManagerRunValue} {
+			if err := key.DeleteValue(name); err != nil && !errors.Is(err, registry.ErrNotExist) {
+				return fmt.Errorf("关闭开机自启失败: %w", err)
+			}
 		}
 		return nil
 	}
@@ -69,6 +85,7 @@ func setManagerAutoStart(enabled bool) error {
 	if err := key.SetStringValue(managerRunValue, command); err != nil {
 		return fmt.Errorf("保存开机自启配置失败: %w", err)
 	}
+	_ = key.DeleteValue(legacyManagerRunValue)
 	return nil
 }
 

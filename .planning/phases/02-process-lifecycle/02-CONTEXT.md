@@ -15,7 +15,7 @@
 ## Locked Decisions
 
 1. `Workspace` 继续代表持久化配置；`Instance` 只存在内存。
-2. `codexpro-core.exe` 按 v1 约束从 `codexprov4.exe` 同目录解析。
+2. `codexpro-core.exe` 按 v1 约束从 `codexpro-plus.exe` 同目录解析。
 3. 每个 Workspace 使用稳定 token。配置版本最终升级到 v3：v1/v2 Workspace 自动补齐 CodexPro 参数；token 属于连接配置，不属于运行时状态。
 4. token 使用 32 字节随机数据的 hex 表示（64 个十六进制字符），用户也可以自定义，但至少 24 字节。
 5. Workspace 独立持久化 `bash_mode`、`write_mode`、`tool_mode`、`inherit_env`；旧配置迁移默认保持现有行为：`full / workspace / full / true`。

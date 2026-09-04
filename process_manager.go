@@ -548,13 +548,13 @@ func waitForPortListening(port int, done <-chan struct{}, timeout time.Duration)
 func defaultCorePath() (string, error) {
 	executable, err := os.Executable()
 	if err != nil {
-		return "", fmt.Errorf("无法获取 codexprov4.exe 路径: %w", err)
+		return "", fmt.Errorf("无法获取 codexpro-plus.exe 路径: %w", err)
 	}
 	path := filepath.Join(filepath.Dir(executable), "codexpro-core.exe")
 	info, err := os.Stat(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return "", fmt.Errorf("未找到 codexpro-core.exe，请将它放到 codexprov4.exe 同目录：%s", path)
+			return "", fmt.Errorf("未找到 codexpro-core.exe，请将它放到 codexpro-plus.exe 同目录：%s", path)
 		}
 		return "", fmt.Errorf("无法访问 codexpro-core.exe: %w", err)
 	}

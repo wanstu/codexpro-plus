@@ -19,11 +19,11 @@ const (
 )
 
 func acquireSingleInstance() (func(), bool, error) {
-	configPath, err := DefaultConfigPath()
+	controlDir, err := singleInstanceControlDir()
 	if err != nil {
 		return nil, false, err
 	}
-	lockPath := filepath.Join(filepath.Dir(configPath), managerLockFileName)
+	lockPath := filepath.Join(controlDir, managerLockFileName)
 	return acquireInstanceLock(lockPath)
 }
 
@@ -50,7 +50,7 @@ func acquireInstanceLock(lockPath string) (func(), bool, error) {
 		if errors.Is(err, windows.ERROR_SHARING_VIOLATION) || errors.Is(err, windows.ERROR_LOCK_VIOLATION) {
 			return func() {}, false, nil
 		}
-		return nil, false, fmt.Errorf("获取 codexprov4 单实例锁失败: %w", err)
+		return nil, false, fmt.Errorf("获取 CodexPro+ 单实例锁失败: %w", err)
 	}
 
 	released := false
@@ -64,12 +64,20 @@ func acquireInstanceLock(lockPath string) (func(), bool, error) {
 	return release, true, nil
 }
 
-func singleInstanceControlPath(name string) (string, error) {
-	configPath, err := DefaultConfigPath()
+func singleInstanceControlDir() (string, error) {
+	legacyPath, err := legacyConfigPath()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(filepath.Dir(configPath), name), nil
+	return filepath.Dir(legacyPath), nil
+}
+
+func singleInstanceControlPath(name string) (string, error) {
+	controlDir, err := singleInstanceControlDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(controlDir, name), nil
 }
 
 func prepareSingleInstanceWake() error {

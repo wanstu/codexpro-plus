@@ -50,7 +50,7 @@ func (t *TrayManager) Start() {
 		})
 
 		tray.SetIcon(t.icon).
-			SetTooltip("CodexPro 工作区管理器").
+			SetTooltip("CodexPro+").
 			SetMenu(menu)
 		tray.OnClick(func() {
 			t.app.showMainWindow()

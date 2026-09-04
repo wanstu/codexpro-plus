@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: 可用托盘管理器
-status: verifying
-last_updated: "2026-09-04T20:55:00+08:00"
+status: release_candidate
+last_updated: "2026-09-04T21:43:00+08:00"
 last_activity: 2026-09-04
 progress:
   total_phases: 4
@@ -45,7 +45,7 @@ Last activity: 2026-09-04 — Added manager single-instance wake behavior and pr
 - Existing v1/v2 config is migrated in place without changing Workspace ID/path/port/auto-start or rotating an existing token.
 - Added runtime-only `Instance` / `RuntimeState`; PID/status/start time are never persisted.
 - Added `ProcessManager` with start, stop, stop-all, abnormal-exit tracking and per-Workspace log tail.
-- `codexpro-core.exe` is resolved next to the running `codexprov4.exe`.
+- `codexpro-core.exe` is resolved next to the running `codexpro-plus.exe`.
 - Core launch passes Workspace root, allowed roots, port, stable token, full tool/bash mode and inherited environment.
 - Windows stop uses `taskkill.exe /PID <pid> /T /F` to terminate the process tree.
 - Workspace UI now shows running/stopped status, PID, startup time, token, start/stop and logs.
@@ -69,6 +69,11 @@ Last activity: 2026-09-04 — Added manager single-instance wake behavior and pr
 - UI now exposes core readiness and Windows manager auto-start state.
 - Manager auto-start state now verifies that the Run-key command points to the current executable, so a stale entry from a moved/old build is not reported as enabled.
 - Added Windows manager single-instance locking (`manager.lock` exclusive handle); a second launch never creates another App/ProcessManager. Normal repeat launch writes `show-window.request` so the primary restores/shows its window, while `--autostart` repeat launch exits silently.
+- Product/repository identity is now `CodexPro+` / `codexpro-plus`; executable output is `codexpro-plus.exe`.
+- New config root is `~/.config/codexpro-plus`; first launch copies legacy `~/.config/codexprov4/config.json` without deleting the legacy file.
+- Added reproducible `scripts/build-codexpro-core.ps1`, pinned to CodexPro upstream commit `587f7fd3a4644a847bba13aeb49336056052e1f6` by default.
+- Added Windows GitHub Actions CI: Go tests, pinned CodexPro core build, Wails build, ZIP artifact, and automatic GitHub Release for `v*` tags.
+- README replaced with full architecture, build, core packaging, configuration, CI and release documentation.
 
 ## Verification Status / Risks
 
@@ -81,11 +86,8 @@ Last activity: 2026-09-04 — Added manager single-instance wake behavior and pr
 
 ## Next Action
 
-Run locally from `D:\projects\codexprov4`:
-
-1. `go test ./...`
-2. `wails build`
-3. Verify an existing v2 config migrates to v3 without changing existing tokens/ports.
-4. Rapidly click Start on one Workspace; only one launch flow should occur and the button should immediately show `启动中…` disabled.
-5. Edit a stopped Workspace and verify Token / Bash / Write / Tool / Inherit Env persist and are reflected by that instance's `server_config` after restart.
-6. Re-run the Phase 2/3 tray/autostart smoke checks, then move PROC/TRAY/AUTO/CORE requirements to Validated.
+1. Commit the CodexPro+ rename, config migration, core build script, README and CI workflow.
+2. Repoint local `v1.0.0-rc1` to the release-candidate commit before the first remote push.
+3. Create `wanstu/codexpro-plus`, push `master`, then push `v1.0.0-rc1`.
+4. Verify the GitHub Actions Windows workflow passes and that the prerelease contains `CodexProPlus-windows-amd64.zip`.
+5. Final manual smoke check: ordinary repeated launch restores the existing window; repeated `--autostart` remains silent.

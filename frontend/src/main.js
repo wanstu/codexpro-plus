@@ -448,7 +448,7 @@ async function openLogDialog(workspace) {
     state.logWorkspaceId = workspace.id;
     elements.logTitle.textContent = `${workspace.alias} · 运行日志`;
     const runtimeState = state.runtimeStates.get(workspace.id) || {};
-    elements.logPath.textContent = runtimeState.log_path || `~/.config/codexprov4/logs/${workspace.id}.log`;
+    elements.logPath.textContent = runtimeState.log_path || `~/.config/codexpro-plus/logs/${workspace.id}.log`;
     elements.logOutput.textContent = "正在读取日志…";
     openModal(elements.logDialog);
     await refreshLog();

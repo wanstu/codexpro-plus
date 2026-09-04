@@ -1,4 +1,4 @@
-# codexprov4
+# CodexPro+
 
 ## What This Is
 
@@ -17,7 +17,7 @@ codexpro 的 Windows 原生封装。codexpro 是一个 MCP HTTP 服务，原生�
 **Goal:** 交付一个能日常使用的 Windows 托盘应用，让多个 codexpro 工作目录各自独立跑起来，配置持久化且不被运行时操作污染。
 
 **Target features:**
-- 工作目录增删改 + 持久化到 `~/.config/codexprov4/config.json`
+- 工作目录增删改 + 持久化到 `~/.config/codexpro-plus/config.json`（兼容迁移旧 `codexprov4` 配置）
 - 端口分配：默认 8800-8899 可配置范围自动挑空闲端口，也允许为单个目录手动指定
 - 进程启停与进程列表（别名 / PID / 端口 / 目录），条目可点选
 - 托盘常驻：左键开面板、右键菜单含「退出」
@@ -32,7 +32,7 @@ codexpro 的 Windows 原生封装。codexpro 是一个 MCP HTTP 服务，原生�
 - [x] **WORK-02**: 用户可以编辑已添加的工作目录 — Phase 1
 - [x] **WORK-03**: 用户可以删除工作目录 — Phase 1
 - [x] **WORK-04**: 每个工作目录有独立端口（默认从可配置的端口范围自动分配，也可为该目录手动指定端口）— Phase 1
-- [x] **WORK-05**: 工作目录配置持久化到 `~/.config/codexprov4/config.json` — Phase 1
+- [x] **WORK-05**: 工作目录配置持久化到 `~/.config/codexpro-plus/config.json`，并兼容迁移旧配置 — Phase 1/rename migration
 - [x] **UI-04**: 列表为空时显示引导文案，不是空白 — Phase 1
 
 ### Active
@@ -47,7 +47,7 @@ codexpro 的 Windows 原生封装。codexpro 是一个 MCP HTTP 服务，原生�
 - [ ] **TRAY-03**: 右键托盘图标有菜单，含「退出」
 - [ ] **AUTO-01**: 管理器本身可以设置为开机自启动
 - [ ] **AUTO-02**: 每个工作目录可单独勾选是否随管理器自动拉起
-- [ ] **MGR-01**: codexprov4 管理器本身必须单实例运行；普通重复启动唤醒已有主窗口，`--autostart` 重复启动静默退出，避免多个 ProcessManager 导致 Workspace 运行状态分裂
+- [ ] **MGR-01**: CodexPro+ 管理器本身必须单实例运行；普通重复启动唤醒已有主窗口，`--autostart` 重复启动静默退出，避免多个 ProcessManager 导致 Workspace 运行状态分裂
 - [ ] **UI-01**: 界面文案全部中文，且**不出现乱码**
 - [ ] **UI-02**: 所有文字完整显示，**不被截断或遮挡**
 - [ ] **UI-03**: 每个控件的作用**自解释**（不靠用户猜）

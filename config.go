@@ -11,13 +11,15 @@ import (
 )
 
 const (
-	configVersion      = 3
-	defaultPortStart   = 8800
-	defaultPortEnd     = 8899
-	tokenBytes         = 32
-	defaultBashMode    = "full"
-	defaultWriteMode   = "workspace"
-	defaultToolMode    = "full"
+	configVersion         = 3
+	defaultPortStart      = 8800
+	defaultPortEnd        = 8899
+	tokenBytes            = 32
+	defaultBashMode       = "full"
+	defaultWriteMode      = "workspace"
+	defaultToolMode       = "full"
+	configDirectory       = "codexpro-plus"
+	legacyConfigDirectory = "codexprov4"
 )
 
 type Config struct {
@@ -73,7 +75,15 @@ func DefaultConfigPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("无法获取用户目录: %w", err)
 	}
-	return filepath.Join(home, ".config", "codexprov4", "config.json"), nil
+	return filepath.Join(home, ".config", configDirectory, "config.json"), nil
+}
+
+func legacyConfigPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("无法获取用户目录: %w", err)
+	}
+	return filepath.Join(home, ".config", legacyConfigDirectory, "config.json"), nil
 }
 
 type ConfigStore struct {
@@ -89,7 +99,42 @@ func NewDefaultConfigStore() (*ConfigStore, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := migrateLegacyConfigIfNeeded(path); err != nil {
+		return nil, err
+	}
 	return NewConfigStore(path), nil
+}
+
+func migrateLegacyConfigIfNeeded(newPath string) error {
+	oldPath, err := legacyConfigPath()
+	if err != nil {
+		return err
+	}
+	return migrateConfigFileIfNeeded(newPath, oldPath)
+}
+
+func migrateConfigFileIfNeeded(newPath, oldPath string) error {
+	if _, err := os.Stat(newPath); err == nil {
+		return nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("检查新配置失败: %w", err)
+	}
+
+	data, err := os.ReadFile(oldPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("读取旧版配置失败: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
+		return fmt.Errorf("创建新版配置目录失败: %w", err)
+	}
+	if err := os.WriteFile(newPath, data, 0o600); err != nil {
+		return fmt.Errorf("迁移旧版配置失败: %w", err)
+	}
+	return nil
 }
 
 func (s *ConfigStore) Path() string {

@@ -2,7 +2,7 @@
 
 ## Phase Goal
 
-完成 codexprov4 的第一条闭环：用户能在中文 UI 中添加、编辑、删除 Workspace，配置可靠写入 `~/.config/codexprov4/config.json`，并为每个 Workspace 分配独立端口。
+完成 CodexPro+ 的第一条闭环：用户能在中文 UI 中添加、编辑、删除 Workspace，配置可靠写入 `~/.config/codexpro-plus/config.json`，并为每个 Workspace 分配独立端口；旧 `codexprov4` 配置由后续 rename migration 兼容迁移。
 
 ## Requirements
 
@@ -23,7 +23,7 @@
 4. 默认端口范围 8800-8899，范围可配置。
 5. 单个 Workspace 可手动指定端口。
 6. 运行时临时切换目录、CLI 都不做。
-7. 配置路径固定为 `~/.config/codexprov4/config.json`。
+7. 配置路径固定为 `~/.config/codexpro-plus/config.json`；若仅存在旧 `codexprov4` 配置则复制迁移并保留旧文件。
 
 ## Proposed Persistent Model
 
@@ -115,7 +115,7 @@ type WorkspaceInput struct {
 
 主界面建议：
 
-- 顶部：标题“CodexPro 工作区管理器” + “端口设置”。
+- 顶部：标题“CodexPro+” + “端口设置”。
 - 主区：Workspace 卡片/表格，每项至少展示 Alias、Path、Port、Auto-start 状态。
 - 操作：添加、编辑、删除。
 - 空状态：说明“还没有工作目录”，并给出“添加工作目录”入口。

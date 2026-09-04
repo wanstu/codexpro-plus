@@ -1,4 +1,4 @@
-module codexprov4
+module github.com/wanstu/codexpro-plus
 
 go 1.25.0
 
