@@ -73,18 +73,25 @@ jobs:
           }
 
       - name: Package Windows release
+        id: package
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $packageName = "CodexProPlus-${{ github.ref_name }}-windows-amd64.zip"
+          } else {
+            $packageName = "CodexProPlus-windows-amd64.zip"
+          }
           Compress-Archive -Force `
             -Path build\bin\codexpro-plus.exe,build\bin\codexpro-core.exe `
-            -DestinationPath dist\CodexProPlus-windows-amd64.zip
+            -DestinationPath (Join-Path "dist" $packageName)
+          "name=$packageName" >> $env:GITHUB_OUTPUT
 
       - name: Upload CI artifact
         uses: actions/upload-artifact@v6
         with:
-          name: CodexProPlus-windows-amd64
-          path: dist/CodexProPlus-windows-amd64.zip
+          name: ${{ steps.package.outputs.name }}
+          path: dist/${{ steps.package.outputs.name }}
           if-no-files-found: error
 
       - name: Create GitHub Release
@@ -92,6 +99,6 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           name: CodexPro+ ${{ github.ref_name }}
-          files: dist/CodexProPlus-windows-amd64.zip
+          files: dist/${{ steps.package.outputs.name }}
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
