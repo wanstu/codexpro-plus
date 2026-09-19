@@ -29,6 +29,9 @@ func TestReleaseBuildProfileDefaults(t *testing.T) {
 	if got := managerRunValueName(); got != releaseManagerRunName {
 		t.Fatalf("managerRunValueName() = %q, want %q", got, releaseManagerRunName)
 	}
+	if got := desktopAppID(); got != releaseDesktopAppID {
+		t.Fatalf("desktopAppID() = %q, want %q", got, releaseDesktopAppID)
+	}
 }
 
 func TestDevBuildProfileIsIsolated(t *testing.T) {
@@ -48,6 +51,9 @@ func TestDevBuildProfileIsIsolated(t *testing.T) {
 	}
 	if got := managerRunValueName(); got != devManagerRunName {
 		t.Fatalf("managerRunValueName() = %q, want %q", got, devManagerRunName)
+	}
+	if got := desktopAppID(); got != devDesktopAppID {
+		t.Fatalf("desktopAppID() = %q, want %q", got, devDesktopAppID)
 	}
 }
 

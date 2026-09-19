@@ -5,9 +5,13 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>CodexPro+</title>
     <link href="/assets/images/appicon.png" rel="icon" type="image/png"/>
+    <link href="/desktopkit/tokens.css" rel="stylesheet"/>
+    <link href="/desktopkit/base.css" rel="stylesheet"/>
+    <link href="/desktopkit/components.css" rel="stylesheet"/>
+    <link href="/desktopkit/navigation.css" rel="stylesheet"/>
     <link href="/main.css" rel="stylesheet"/>
 </head>
-<body>
+<body class="dk-app-shell">
 <div class="app-shell" id="app">
     <header class="topbar">
         <div>
@@ -46,6 +50,29 @@
                         <small>启用后以托盘隐藏模式启动管理器；勾选“随管理器启动”的 Workspace 会自动拉起。</small>
                     </span>
                 </label>
+                <div class="manager-item theme-manager">
+                    <span class="meta-label">界面主题</span>
+                    <div class="theme-controls">
+                        <label>
+                            <span>明暗模式</span>
+                            <select id="theme-mode">
+                                <option value="system">跟随系统</option>
+                                <option value="light">浅色</option>
+                                <option value="dark">深色</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>主题包</span>
+                            <select id="theme-pack">
+                                <option value="">Kit 默认</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="theme-actions">
+                        <small id="theme-source">正在加载 Kit Theme…</small>
+                        <button class="button secondary small" id="theme-refresh" type="button">刷新主题</button>
+                    </div>
+                </div>
                 <form class="manager-item manager-domain-form" id="domain-form">
                     <label for="copy-domain">
                         <span class="meta-label">复制链接域名</span>
@@ -234,6 +261,7 @@
     </div>
 </dialog>
 
+<script src="/desktopkit/theme.js"></script>
 <script src="/main.js"></script>
 </body>
 </html>

@@ -13,6 +13,8 @@ const (
 	devConfigDirectory    = "codexpro-plus-dev"
 	releaseManagerRunName = "CodexProPlus"
 	devManagerRunName     = "CodexProPlusDev"
+	releaseDesktopAppID   = "com.wanstu.codexpro-plus"
+	devDesktopAppID       = "com.wanstu.codexpro-plus.dev"
 )
 
 func currentBuildProfile() string {
@@ -45,4 +47,11 @@ func managerRunValueName() string {
 		return devManagerRunName
 	}
 	return releaseManagerRunName
+}
+
+func desktopAppID() string {
+	if isDevBuild() {
+		return devDesktopAppID
+	}
+	return releaseDesktopAppID
 }

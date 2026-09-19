@@ -9,6 +9,7 @@ const state = {
     runtimeLoading: false,
     pendingStarts: new Set(),
     pendingStops: new Set(),
+    themeCatalog: null,
 };
 
 const elements = {
@@ -28,6 +29,10 @@ const elements = {
     configPath: document.getElementById("config-path"),
     managerAutoStart: document.getElementById("manager-auto-start"),
     managerError: document.getElementById("manager-error"),
+    themeMode: document.getElementById("theme-mode"),
+    themePack: document.getElementById("theme-pack"),
+    themeRefresh: document.getElementById("theme-refresh"),
+    themeSource: document.getElementById("theme-source"),
     domainForm: document.getElementById("domain-form"),
     copyDomain: document.getElementById("copy-domain"),
     portRangeForm: document.getElementById("port-range-form"),
@@ -61,6 +66,162 @@ const elements = {
 };
 
 let toastTimer = null;
+
+const themeModeStorageKey = "codexpro-plus.theme.mode";
+const themePackStorageKey = "codexpro-plus.theme.pack";
+
+function themeApi() {
+    return window.desktopKitTheme || null;
+}
+
+function storedThemeMode() {
+    const value = window.localStorage.getItem(themeModeStorageKey);
+    return ["light", "dark", "system"].includes(value) ? value : "system";
+}
+
+function storedThemePack() {
+    return window.localStorage.getItem(themePackStorageKey) || "";
+}
+
+function populateThemePacks(catalog) {
+    state.themeCatalog = catalog || null;
+    const current = storedThemePack();
+    elements.themePack.replaceChildren();
+
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = "Kit 默认";
+    elements.themePack.appendChild(defaultOption);
+
+    const packs = Array.isArray(catalog?.packs) ? catalog.packs : [];
+    packs.forEach((pack) => {
+        if (!pack?.name) return;
+        const option = document.createElement("option");
+        option.value = pack.name;
+        option.textContent = pack.display_name || pack.displayName || pack.name;
+        if (pack.description) option.title = pack.description;
+        elements.themePack.appendChild(option);
+    });
+
+    elements.themePack.value = packs.some((pack) => pack?.name === current) ? current : "";
+    if (current && !elements.themePack.value) {
+        window.localStorage.removeItem(themePackStorageKey);
+    }
+
+    const source = catalog?.source ? String(catalog.source) : "runtime";
+    elements.themeSource.textContent = `Kit Theme · ${packs.length} 个主题 · ${source}`;
+}
+
+async function loadThemeCatalog(refresh = false) {
+    const api = themeApi();
+    if (!api) {
+        elements.themeMode.disabled = true;
+        elements.themePack.disabled = true;
+        elements.themeRefresh.disabled = true;
+        elements.themeSource.textContent = "Kit Theme 不可用";
+        return null;
+    }
+
+    let catalog = refresh && api.refreshCatalog
+        ? await api.refreshCatalog()
+        : await api.loadCatalog();
+
+    if (!refresh && catalog?.source === "builtin" && api.refreshCatalog) {
+        try {
+            catalog = await api.refreshCatalog();
+        } catch (_) {
+            // Offline first start keeps Kit's built-in fallback themes available.
+        }
+    }
+
+    populateThemePacks(catalog);
+    return catalog;
+}
+
+async function applyStoredTheme() {
+    const api = themeApi();
+    if (!api) return;
+
+    const mode = storedThemeMode();
+    elements.themeMode.value = mode;
+    api.apply(mode);
+
+    const pack = storedThemePack();
+    if (!pack) {
+        api.clearAppliedPack();
+        return;
+    }
+
+    const available = Array.isArray(state.themeCatalog?.packs)
+        && state.themeCatalog.packs.some((item) => item?.name === pack);
+    if (!available) {
+        window.localStorage.removeItem(themePackStorageKey);
+        elements.themePack.value = "";
+        api.clearAppliedPack();
+        return;
+    }
+    await api.applyPack(pack);
+}
+
+async function initialiseTheme() {
+    try {
+        const api = themeApi();
+        if (!api) {
+            elements.themeSource.textContent = "Kit Theme 不可用";
+            return;
+        }
+        api.apply(storedThemeMode());
+        await loadThemeCatalog(false);
+        await applyStoredTheme();
+    } catch (error) {
+        elements.themeSource.textContent = `主题加载失败：${errorText(error)}`;
+    }
+}
+
+function changeThemeMode() {
+    const api = themeApi();
+    if (!api) return;
+    const mode = elements.themeMode.value;
+    api.apply(mode);
+    window.localStorage.setItem(themeModeStorageKey, mode);
+}
+
+async function changeThemePack() {
+    const api = themeApi();
+    if (!api) return;
+    const pack = elements.themePack.value;
+    elements.themePack.disabled = true;
+    try {
+        if (!pack) {
+            api.clearAppliedPack();
+            window.localStorage.removeItem(themePackStorageKey);
+        } else {
+            await api.applyPack(pack);
+            window.localStorage.setItem(themePackStorageKey, pack);
+        }
+    } catch (error) {
+        showToast(`切换主题失败：${errorText(error)}`, "error");
+        populateThemePacks(state.themeCatalog);
+        await applyStoredTheme();
+    } finally {
+        elements.themePack.disabled = false;
+    }
+}
+
+async function refreshThemes() {
+    elements.themeRefresh.disabled = true;
+    elements.themeRefresh.textContent = "刷新中…";
+    try {
+        await loadThemeCatalog(true);
+        await applyStoredTheme();
+        showToast("主题列表已刷新。", "success");
+    } catch (error) {
+        showToast(`刷新主题失败：${errorText(error)}`, "error");
+    } finally {
+        elements.themeRefresh.disabled = false;
+        elements.themeRefresh.textContent = "刷新主题";
+    }
+}
 
 function appApi() {
     const api = window.go?.main?.App;
@@ -802,6 +963,9 @@ elements.workspaceForm.addEventListener("submit", submitWorkspace);
 elements.domainForm.addEventListener("submit", saveDomain);
 elements.portRangeForm.addEventListener("submit", savePortRange);
 elements.managerAutoStart.addEventListener("change", changeManagerAutoStart);
+elements.themeMode.addEventListener("change", changeThemeMode);
+elements.themePack.addEventListener("change", changeThemePack);
+elements.themeRefresh.addEventListener("click", refreshThemes);
 elements.logCloseButton.addEventListener("click", closeLogDialog);
 elements.logDoneButton.addEventListener("click", closeLogDialog);
 elements.logRefreshButton.addEventListener("click", refreshLog);
@@ -823,6 +987,7 @@ elements.logDialog.addEventListener("close", () => {
 });
 
 async function initialise() {
+    await initialiseTheme();
     updatePortModeUi();
     await loadConfig();
     await Promise.all([loadManagerSettings(), loadRuntime()]);

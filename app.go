@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wanstu/wails-desktop-kit/autostart"
 )
 
 type ManagerSettings struct {
@@ -19,51 +20,48 @@ type ManagerSettings struct {
 }
 
 type App struct {
-	ctx       context.Context
-	service   *WorkspaceService
-	processes *ProcessManager
-	tray      *TrayManager
-	initErr   error
+	ctx           context.Context
+	service       *WorkspaceService
+	processes     *ProcessManager
+	launchAtLogin *autostart.Manager
+	initErr       error
 }
 
 func NewApp() *App {
-	store, err := NewDefaultConfigStore()
-	app := &App{initErr: err}
-	if err == nil {
-		app.service = NewWorkspaceService(store)
-		app.processes = NewProcessManager(app.service)
-	}
-	return app
-}
+	app := &App{}
 
-func (a *App) attachTray(icon []byte) {
-	if a == nil {
-		return
+	store, err := NewDefaultConfigStore()
+	if err != nil {
+		app.initErr = err
+		return app
 	}
-	a.tray = NewTrayManager(a, icon)
+
+	launchAtLogin, err := autostart.New(autostart.Config{
+		ID:          managerRunValueName(),
+		DisplayName: appDisplayName(),
+		Arguments:   []string{"--autostart"},
+	})
+	if err != nil {
+		app.initErr = err
+		return app
+	}
+
+	app.service = NewWorkspaceService(store)
+	app.processes = NewProcessManager(app.service)
+	app.launchAtLogin = launchAtLogin
+	return app
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	go watchSingleInstanceWake(ctx, a.showMainWindow)
 	if a.processes != nil {
 		go a.processes.StartConfiguredWorkspaces()
-	}
-}
-
-func (a *App) domReady(ctx context.Context) {
-	a.ctx = ctx
-	if a.tray != nil {
-		a.tray.Start()
 	}
 }
 
 func (a *App) shutdown(ctx context.Context) {
 	if a.processes != nil {
 		_ = a.processes.StopAll()
-	}
-	if a.tray != nil {
-		a.tray.Stop()
 	}
 }
 
@@ -176,7 +174,7 @@ func (a *App) GetManagerSettings() (ManagerSettings, error) {
 	if err := a.ready(); err != nil {
 		return ManagerSettings{}, err
 	}
-	autoStart, err := managerAutoStartEnabled()
+	autoStart, err := a.launchAtLogin.Enabled()
 	if err != nil {
 		return ManagerSettings{}, err
 	}
@@ -192,9 +190,6 @@ func (a *App) GetManagerSettings() (ManagerSettings, error) {
 		settings.CoreReady = true
 		settings.CorePath = path
 	}
-	if a.tray != nil {
-		settings.TrayError = a.tray.LastError()
-	}
 	return settings, nil
 }
 
@@ -202,25 +197,10 @@ func (a *App) SetManagerAutoStart(enabled bool) (ManagerSettings, error) {
 	if err := a.ready(); err != nil {
 		return ManagerSettings{}, err
 	}
-	if err := setManagerAutoStart(enabled); err != nil {
+	if err := a.launchAtLogin.SetEnabled(enabled); err != nil {
 		return ManagerSettings{}, err
 	}
 	return a.GetManagerSettings()
-}
-
-func (a *App) showMainWindow() {
-	if a == nil || a.ctx == nil {
-		return
-	}
-	runtime.WindowUnminimise(a.ctx)
-	runtime.Show(a.ctx)
-}
-
-func (a *App) quitApplication() {
-	if a == nil || a.ctx == nil {
-		return
-	}
-	runtime.Quit(a.ctx)
 }
 
 func (a *App) ready() error {
@@ -235,6 +215,9 @@ func (a *App) ready() error {
 	}
 	if a.processes == nil {
 		return errors.New("进程管理器未初始化")
+	}
+	if a.launchAtLogin == nil {
+		return errors.New("开机自启服务未初始化")
 	}
 	return nil
 }

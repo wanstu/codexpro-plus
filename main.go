@@ -2,12 +2,14 @@ package main
 
 import (
 	"embed"
+	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 
-	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	desktopkit "github.com/wanstu/wails-desktop-kit"
+	kitui "github.com/wanstu/wails-desktop-kit/ui"
 )
 
 //go:embed all:frontend/src
@@ -17,52 +19,68 @@ var assets embed.FS
 var trayIcon []byte
 
 func main() {
-	releaseInstance, primary, err := acquireSingleInstance()
+	launch, err := desktopkit.ParseLaunchOptions(os.Args[1:])
 	if err != nil {
-		println("Error:", err.Error())
-		return
-	}
-	if !primary {
-		if !launchedFromAutoStart() {
-			_ = requestExistingInstanceWindow()
-		}
-		return
-	}
-	defer releaseInstance()
-	if err := prepareSingleInstanceWake(); err != nil {
-		println("Warning:", err.Error())
+		fmt.Fprintln(os.Stderr, "codexpro-plus:", err)
+		os.Exit(1)
 	}
 
 	app := NewApp()
-	app.attachTray(trayIcon)
-
-	err = wails.Run(&options.App{
-		Title:             appDisplayName(),
-		Width:             1120,
-		Height:            820,
-		MinWidth:          820,
-		MinHeight:         620,
-		StartHidden:       launchedFromAutoStart(),
-		HideWindowOnClose: true,
-		AssetServer: &assetserver.Options{
-			Assets: assets,
-		},
-		BackgroundColour: &options.RGBA{R: 244, G: 247, B: 251, A: 1},
-		OnStartup:        app.startup,
-		OnDomReady:       app.domReady,
-		OnShutdown:       app.shutdown,
-		Bind: []interface{}{
-			app,
-		},
-	})
-
-	if err != nil {
-		println("Error:", err.Error())
+	if err := runDesktop(app, launch); err != nil {
+		fmt.Fprintln(os.Stderr, "codexpro-plus:", err)
+		os.Exit(1)
 	}
 }
 
-func launchedFromAutoStart() bool {
-	for _, arg := range os.Args[1:] {
+func runDesktop(app *App, launch desktopkit.LaunchOptions) error {
+	appAssets, err := fs.Sub(assets, "frontend/src")
+	if err != nil {
+		return err
+	}
+
+	window := desktopkit.DefaultWindowConfig()
+	window.Width = 1120
+	window.Height = 820
+	window.MinWidth = 820
+	window.MinHeight = 620
+	window.HidePolicy = desktopkit.HideSafe
+	window.StartHiddenOnAutoStart = true
+	window.Background = desktopkit.Color{R: 244, G: 247, B: 251, A: 1}
+
+	return desktopkit.Run(desktopkit.Config{
+		ID:             desktopAppID(),
+		Title:          appDisplayName(),
+		Assets:         kitui.Mount(appAssets),
+		Bind:           []interface{}{app},
+		Theme:          desktopkit.DefaultThemeConfig(),
+		Launch:         launch,
+		Window:         window,
+		SingleInstance: true,
+		SecondInstance: func(controller *desktopkit.Controller, data options.SecondInstanceData) {
+			if hasAutoStartArg(data.Args) {
+				return
+			}
+			controller.ShowWindow()
+		},
+		Tray: desktopkit.TrayConfig{
+			Enabled:            true,
+			Icon:               trayIcon,
+			Tooltip:            appDisplayName(),
+			AutoStart:          app.launchAtLogin,
+			ShowLabel:          "打开主面板",
+			HideLabel:          "隐藏主面板",
+			LaunchAtLoginLabel: "开机启动 " + appDisplayName(),
+			QuitLabel:          "退出 " + appDisplayName(),
+		},
+		Hooks: desktopkit.Hooks{
+			Startup:  app.startup,
+			Shutdown: app.shutdown,
+		},
+	})
+}
+
+func hasAutoStartArg(args []string) bool {
+	for _, arg := range args {
 		if strings.EqualFold(strings.TrimSpace(arg), "--autostart") {
 			return true
 		}

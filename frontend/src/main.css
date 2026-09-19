@@ -914,3 +914,265 @@ select:focus {
         width: 100%;
     }
 }
+
+
+/* Desktop Kit token integration. Product layout remains local; colors and surfaces follow Kit themes. */
+:root {
+    color: var(--dk-text);
+    background: var(--dk-bg-app);
+}
+
+html,
+body {
+    background: var(--dk-bg-app);
+    color: var(--dk-text);
+}
+
+h1,
+h2,
+h3,
+.manager-value,
+.meta-value,
+.radio-card strong,
+.checkbox-row strong,
+.switch-row strong,
+.instance-row strong,
+.token-value code {
+    color: var(--dk-text);
+}
+
+.eyebrow,
+.subtitle,
+.panel-heading p,
+.section-heading p,
+.hint,
+.empty-state p,
+.workspace-id,
+small,
+.log-path,
+.meta-label {
+    color: var(--dk-text-secondary);
+}
+
+.panel,
+.workspace-card,
+.empty-state,
+.instance-row,
+.radio-card,
+.workspace-dialog,
+.log-dialog {
+    border-color: var(--dk-border);
+    background: var(--dk-bg-elevated);
+    color: var(--dk-text);
+    box-shadow: var(--dk-shadow-panel);
+}
+
+.manager-item,
+.switch-row,
+.checkbox-row,
+.compact-empty,
+.codex-settings-fieldset,
+.icon-button {
+    border-color: var(--dk-border-subtle);
+    background: var(--dk-bg-subtle);
+    color: var(--dk-text);
+}
+
+.workspace-dialog,
+.log-dialog {
+    box-shadow: var(--dk-shadow-dialog);
+}
+
+.workspace-dialog::backdrop,
+.log-dialog::backdrop {
+    background: var(--dk-backdrop);
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    border-color: var(--dk-border);
+    background: var(--dk-bg-elevated);
+    color: var(--dk-text);
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+    border-color: var(--dk-primary);
+    box-shadow: 0 0 0 3px var(--dk-focus-ring);
+}
+
+.button.primary {
+    background: var(--dk-primary);
+    color: var(--dk-primary-contrast);
+    box-shadow: none;
+}
+
+.button.primary:hover:not(:disabled) {
+    background: var(--dk-primary-hover);
+}
+
+.button.secondary {
+    border-color: color-mix(in srgb, var(--dk-primary) 35%, var(--dk-border));
+    background: color-mix(in srgb, var(--dk-primary) 10%, var(--dk-bg-elevated));
+    color: var(--dk-primary);
+}
+
+.button.secondary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--dk-primary) 16%, var(--dk-bg-elevated));
+}
+
+.button.ghost {
+    border-color: var(--dk-border);
+    background: var(--dk-bg-elevated);
+    color: var(--dk-text-secondary);
+}
+
+.button.ghost:hover:not(:disabled),
+.instance-row:hover {
+    background: var(--dk-bg-subtle);
+}
+
+.button.danger,
+.button.ghost-danger {
+    border-color: var(--dk-danger-border);
+    background: var(--dk-danger-bg);
+    color: var(--dk-danger);
+}
+
+.button.danger:hover:not(:disabled),
+.button.ghost-danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--dk-danger) 14%, var(--dk-bg-elevated));
+}
+
+.message,
+.toast {
+    border-color: var(--dk-border);
+    background: var(--dk-bg-elevated);
+    color: var(--dk-text);
+}
+
+.message.success,
+.toast.success {
+    border-color: color-mix(in srgb, var(--dk-success) 35%, var(--dk-border));
+    background: var(--dk-success-bg);
+    color: var(--dk-success);
+}
+
+.message.error,
+.toast.error,
+.inline-error,
+.runtime-error {
+    border-color: var(--dk-danger-border);
+    background: var(--dk-danger-bg);
+    color: var(--dk-danger);
+}
+
+.toast.info {
+    border-color: color-mix(in srgb, var(--dk-primary) 35%, var(--dk-border));
+    background: color-mix(in srgb, var(--dk-primary) 10%, var(--dk-bg-elevated));
+    color: var(--dk-primary);
+}
+
+.status-pill.neutral,
+.status-pill.stopped,
+.badge {
+    background: var(--dk-bg-muted);
+    color: var(--dk-text-secondary);
+}
+
+.status-pill.running,
+.badge.enabled {
+    background: var(--dk-success-bg);
+    color: var(--dk-success);
+}
+
+.status-pill.error {
+    background: var(--dk-danger-bg);
+    color: var(--dk-danger);
+}
+
+.build-badge {
+    border-color: color-mix(in srgb, var(--dk-warning) 55%, var(--dk-border));
+    background: var(--dk-warning-bg);
+    color: var(--dk-warning);
+}
+
+.radio-card:has(input:checked) {
+    border-color: var(--dk-primary);
+    background: color-mix(in srgb, var(--dk-primary) 8%, var(--dk-bg-elevated));
+}
+
+.empty-icon {
+    background: color-mix(in srgb, var(--dk-primary) 12%, var(--dk-bg-elevated));
+    color: var(--dk-primary);
+}
+
+.running-card {
+    border-color: color-mix(in srgb, var(--dk-success) 45%, var(--dk-border));
+    box-shadow: var(--dk-shadow-panel);
+}
+
+.workspace-highlight {
+    outline-color: color-mix(in srgb, var(--dk-primary) 32%, transparent);
+}
+
+.link-button {
+    color: var(--dk-primary);
+}
+
+.log-output {
+    border-color: var(--dk-border);
+    background: var(--dk-log-bg);
+    color: var(--dk-log-text);
+}
+
+.dialog-actions {
+    border-top-color: var(--dk-border-subtle);
+}
+
+.theme-manager {
+    gap: 10px;
+}
+
+.theme-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.theme-controls label {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.theme-controls label > span {
+    color: var(--dk-text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.theme-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.theme-actions small {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+    .theme-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .theme-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

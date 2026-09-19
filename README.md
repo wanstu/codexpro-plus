@@ -2,7 +2,7 @@
 
 CodexPro+ 是一个面向 Windows 的 CodexPro Workspace / Runtime 管理器。
 
-它使用 Wails 提供原生桌面界面，在一个常驻托盘程序里管理多个独立工作目录，并为每个 Workspace 启动一个独立的 `codexpro-core.exe` 实例。
+它使用 Wails + Wails Desktop Kit 提供原生桌面界面，在一个常驻托盘程序里管理多个独立工作目录，并为每个 Workspace 启动一个独立的 `codexpro-core.exe` 实例。
 
 > CodexPro+ 不是 CodexPro 的 fork，也不修改 CodexPro 的业务逻辑。它负责 Workspace、配置、端口、进程、托盘、自启动和运行状态；实际 MCP 能力由 CodexPro 提供。
 
@@ -13,7 +13,8 @@ CodexPro+ 是一个面向 Windows 的 CodexPro Workspace / Runtime 管理器。
 - 自动端口分配，也可以手动指定端口。
 - 每个 Workspace 独立配置 CodexPro 权限参数。
 - 启动 / 停止 `codexpro-core.exe`，显示 PID、端口、启动时间和运行日志。
-- Windows 托盘常驻。
+- Windows 托盘常驻，托盘、单实例、开机自启动和窗口隐藏行为统一由 Wails Desktop Kit 管理。
+- 支持 Kit Runtime Theme：浅色/深色/跟随系统，以及在线主题包、本地缓存和离线 fallback。
 - 关闭窗口时隐藏到托盘，不退出服务。
 - 普通重复启动 `codexpro-plus.exe` 时唤醒已经运行的主窗口，不创建第二个管理器。
 - `--autostart` 重复启动时静默退出，不自动弹出窗口。
@@ -453,15 +454,13 @@ taskkill.exe /PID <pid> /T /F
 
 ```text
 .
-├── app.go                     Wails API / 生命周期
+├── main.go                    Desktop Kit 启动 / 窗口 / 单实例 / 托盘 / Theme
+├── app.go                     Wails API / 生命周期 / Kit 自启动接入
 ├── config.go                  配置、迁移、持久化
 ├── workspace_service.go       Workspace CRUD / 端口 / CodexPro 参数
 ├── process_manager.go         core 进程生命周期、状态、日志
 ├── process_windows.go         Windows 进程树处理
-├── tray_manager.go            系统托盘
-├── autostart_windows.go       Windows 开机自启动
-├── single_instance_windows.go 单实例和重复启动窗口唤醒
-├── frontend/src/              Wails 前端
+├── frontend/src/              Wails 前端 + Kit UI / Runtime Theme
 ├── scripts/
 │   └── build-codexpro-core.ps1
 ├── .github/workflows/
