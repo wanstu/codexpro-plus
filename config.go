@@ -3,11 +3,13 @@ package main
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/wanstu/wails-desktop-kit/jsonstore"
+	kitpaths "github.com/wanstu/wails-desktop-kit/paths"
 )
 
 const (
@@ -71,19 +73,19 @@ func DefaultConfig() Config {
 }
 
 func DefaultConfigPath() (string, error) {
-	home, err := os.UserHomeDir()
+	dir, err := kitpaths.ConfigDir(currentConfigDirectory())
 	if err != nil {
 		return "", fmt.Errorf("无法获取用户目录: %w", err)
 	}
-	return filepath.Join(home, ".config", currentConfigDirectory(), "config.json"), nil
+	return filepath.Join(dir, "config.json"), nil
 }
 
 func legacyConfigPath() (string, error) {
-	home, err := os.UserHomeDir()
+	dir, err := kitpaths.ConfigDir(legacyConfigDirectory)
 	if err != nil {
 		return "", fmt.Errorf("无法获取用户目录: %w", err)
 	}
-	return filepath.Join(home, ".config", legacyConfigDirectory, "config.json"), nil
+	return filepath.Join(dir, "config.json"), nil
 }
 
 type ConfigStore struct {
@@ -116,26 +118,11 @@ func migrateLegacyConfigIfNeeded(newPath string) error {
 }
 
 func migrateConfigFileIfNeeded(newPath, oldPath string) error {
-	if _, err := os.Stat(newPath); err == nil {
-		return nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("检查新配置失败: %w", err)
-	}
-
-	data, err := os.ReadFile(oldPath)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
+	migrated, err := kitpaths.MigrateFileIfMissing(oldPath, newPath)
 	if err != nil {
-		return fmt.Errorf("读取旧版配置失败: %w", err)
-	}
-
-	if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
-		return fmt.Errorf("创建新版配置目录失败: %w", err)
-	}
-	if err := os.WriteFile(newPath, data, 0o600); err != nil {
 		return fmt.Errorf("迁移旧版配置失败: %w", err)
 	}
+	_ = migrated
 	return nil
 }
 
@@ -143,33 +130,43 @@ func (s *ConfigStore) Path() string {
 	return s.path
 }
 
+func (s *ConfigStore) values() *jsonstore.Store[Config] {
+	return jsonstore.New(s.path, jsonstore.Options[Config]{})
+}
+
 func (s *ConfigStore) Load() (Config, error) {
 	if s == nil || s.path == "" {
 		return Config{}, errors.New("配置文件路径为空")
 	}
 
-	dir := filepath.Dir(s.path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return Config{}, fmt.Errorf("无法创建配置目录: %w", err)
-	}
-
-	data, err := os.ReadFile(s.path)
-	if errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(s.path); errors.Is(err, os.ErrNotExist) {
 		cfg := DefaultConfig()
 		if err := s.Save(cfg); err != nil {
 			return Config{}, fmt.Errorf("创建默认配置失败: %w", err)
 		}
 		return cfg, nil
+	} else if err != nil {
+		return Config{}, fmt.Errorf("读取配置失败: %w", err)
 	}
+
+	cfg, err := s.values().Load()
 	if err != nil {
 		return Config{}, fmt.Errorf("读取配置失败: %w", err)
 	}
 
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return Config{}, fmt.Errorf("配置文件格式错误: %w", err)
+	changed, err := migrateLoadedConfig(&cfg)
+	if err != nil {
+		return Config{}, err
 	}
+	if changed {
+		if err := s.Save(cfg); err != nil {
+			return Config{}, fmt.Errorf("迁移配置失败: %w", err)
+		}
+	}
+	return cfg, nil
+}
 
+func migrateLoadedConfig(cfg *Config) (bool, error) {
 	changed := false
 	legacyBeforeV3 := cfg.Version < 3
 	if cfg.Version < configVersion {
@@ -185,7 +182,7 @@ func (s *ConfigStore) Load() (Config, error) {
 		if workspace.Token == "" {
 			token, err := newWorkspaceToken()
 			if err != nil {
-				return Config{}, err
+				return false, err
 			}
 			workspace.Token = token
 			changed = true
@@ -207,20 +204,10 @@ func (s *ConfigStore) Load() (Config, error) {
 			changed = true
 		}
 	}
-
-	if changed {
-		if err := s.Save(cfg); err != nil {
-			return Config{}, fmt.Errorf("迁移配置失败: %w", err)
-		}
-	}
-	return cfg, nil
+	return changed, nil
 }
 
-func (s *ConfigStore) Save(cfg Config) error {
-	if s == nil || s.path == "" {
-		return errors.New("配置文件路径为空")
-	}
-
+func normalizeConfigForSave(cfg *Config) error {
 	cfg.Version = configVersion
 	if cfg.Workspaces == nil {
 		cfg.Workspaces = []Workspace{}
@@ -244,47 +231,18 @@ func (s *ConfigStore) Save(cfg Config) error {
 			workspace.ToolMode = defaultToolMode
 		}
 	}
+	return nil
+}
 
-	data, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return fmt.Errorf("序列化配置失败: %w", err)
+func (s *ConfigStore) Save(cfg Config) error {
+	if s == nil || s.path == "" {
+		return errors.New("配置文件路径为空")
 	}
-	data = append(data, '\n')
-
-	dir := filepath.Dir(s.path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("无法创建配置目录: %w", err)
+	if err := normalizeConfigForSave(&cfg); err != nil {
+		return err
 	}
-
-	tmp, err := os.CreateTemp(dir, ".config-*.tmp")
-	if err != nil {
-		return fmt.Errorf("创建临时配置失败: %w", err)
-	}
-	tmpPath := tmp.Name()
-	cleanup := func() {
-		_ = tmp.Close()
-		_ = os.Remove(tmpPath)
-	}
-
-	if err := tmp.Chmod(0o600); err != nil {
-		cleanup()
-		return fmt.Errorf("设置临时配置权限失败: %w", err)
-	}
-	if _, err := tmp.Write(data); err != nil {
-		cleanup()
-		return fmt.Errorf("写入临时配置失败: %w", err)
-	}
-	if err := tmp.Sync(); err != nil {
-		cleanup()
-		return fmt.Errorf("同步临时配置失败: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		_ = os.Remove(tmpPath)
-		return fmt.Errorf("关闭临时配置失败: %w", err)
-	}
-	if err := os.Rename(tmpPath, s.path); err != nil {
-		_ = os.Remove(tmpPath)
-		return fmt.Errorf("替换配置文件失败: %w", err)
+	if err := s.values().Save(cfg); err != nil {
+		return fmt.Errorf("保存配置失败: %w", err)
 	}
 	return nil
 }

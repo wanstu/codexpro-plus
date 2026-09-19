@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	desktopkit "github.com/wanstu/wails-desktop-kit"
 	"github.com/wanstu/wails-desktop-kit/autostart"
 )
 
@@ -20,7 +20,7 @@ type ManagerSettings struct {
 }
 
 type App struct {
-	ctx           context.Context
+	controller    *desktopkit.Controller
 	service       *WorkspaceService
 	processes     *ProcessManager
 	launchAtLogin *autostart.Manager
@@ -52,17 +52,21 @@ func NewApp() *App {
 	return app
 }
 
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
+func (a *App) setController(controller *desktopkit.Controller) {
+	a.controller = controller
+}
+
+func (a *App) startup(context.Context) {
 	if a.processes != nil {
 		go a.processes.StartConfiguredWorkspaces()
 	}
 }
 
-func (a *App) shutdown(ctx context.Context) {
+func (a *App) shutdown(context.Context) {
 	if a.processes != nil {
 		_ = a.processes.StopAll()
 	}
+	a.controller = nil
 }
 
 func (a *App) GetConfig() (Config, error) {
@@ -124,14 +128,16 @@ func (a *App) OpenWorkspaceURL(id string) (string, error) {
 	if err := a.ready(); err != nil {
 		return "", err
 	}
-	if a.ctx == nil {
+	if a.controller == nil {
 		return "", errors.New("应用窗口尚未就绪")
 	}
 	workspaceURL, err := a.service.GetWorkspaceURL(id)
 	if err != nil {
 		return "", err
 	}
-	runtime.BrowserOpenURL(a.ctx, workspaceURL)
+	if err := a.controller.OpenURL(workspaceURL); err != nil {
+		return "", err
+	}
 	return workspaceURL, nil
 }
 

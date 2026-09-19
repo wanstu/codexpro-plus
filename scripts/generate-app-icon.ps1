@@ -4,11 +4,8 @@ $root = Split-Path -Parent $PSScriptRoot
 
 $appSource = Join-Path $root "assets\icons\codexpro-plus-app.png"
 $windowSource = Join-Path $root "assets\icons\codexpro-plus-window.png"
-
-$buildIcon = Join-Path $root "build\appicon.png"
 $frontendAppIcon = Join-Path $root "frontend\src\assets\images\appicon.png"
 $frontendTrayIcon = Join-Path $root "frontend\src\assets\images\tray-icon.png"
-$windowsIcon = Join-Path $root "build\windows\icon.ico"
 
 foreach ($source in @($appSource, $windowSource)) {
     if (-not (Test-Path $source)) {
@@ -23,13 +20,16 @@ function Invoke-DesktopKitIconNormalize {
         [Parameter(Mandatory = $true)][double]$Fill
     )
 
-    & go run github.com/wanstu/wails-desktop-kit/cmd/desktopkit icon normalize `
-        --input $Source `
-        --output $Destination `
-        --canvas 1024 `
-        --fill $Fill `
-        --trim-alpha=false
-
+    $args = @(
+        "run", "github.com/wanstu/wails-desktop-kit/cmd/desktopkit",
+        "icon", "normalize",
+        "--input", $Source,
+        "--output", $Destination,
+        "--canvas", "1024",
+        "--fill", $Fill.ToString([Globalization.CultureInfo]::InvariantCulture),
+        "--trim-alpha=false"
+    )
+    & go @args
     if ($LASTEXITCODE -ne 0) {
         throw "Desktop Kit icon normalize failed for $Source"
     }
@@ -38,19 +38,28 @@ function Invoke-DesktopKitIconNormalize {
 Push-Location $root
 try {
     Invoke-DesktopKitIconNormalize -Source $appSource -Destination $frontendAppIcon -Fill 0.98
-    Invoke-DesktopKitIconNormalize -Source $windowSource -Destination $buildIcon -Fill 0.98
     Invoke-DesktopKitIconNormalize -Source $windowSource -Destination $frontendTrayIcon -Fill 0.99
+
+    $prepareArgs = @(
+        "run", "github.com/wanstu/wails-desktop-kit/cmd/desktopkit",
+        "icon", "prepare-wails",
+        "--input", $windowSource,
+        "--desktop-dir", $root,
+        "--normalize",
+        "--canvas", "1024",
+        "--fill", "0.98",
+        "--trim-alpha=false"
+    )
+    & go @prepareArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Desktop Kit Wails icon preparation failed for $windowSource"
+    }
 }
 finally {
     Pop-Location
 }
 
-# Wails regenerates the Windows ICO from build/appicon.png when this is absent.
-if (Test-Path $windowsIcon) {
-    Remove-Item -Force $windowsIcon
-}
-
 Write-Host "Prepared CodexPro+ icons with Wails Desktop Kit:"
 Write-Host "  app:    $frontendAppIcon"
 Write-Host "  tray:   $frontendTrayIcon"
-Write-Host "  window: $buildIcon"
+Write-Host ("  window: " + (Join-Path $root "build\appicon.png"))

@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"strings"
 
-	"github.com/wailsapp/wails/v2/pkg/options"
 	desktopkit "github.com/wanstu/wails-desktop-kit"
 	kitui "github.com/wanstu/wails-desktop-kit/ui"
 )
@@ -48,20 +46,15 @@ func runDesktop(app *App, launch desktopkit.LaunchOptions) error {
 	window.Background = desktopkit.Color{R: 244, G: 247, B: 251, A: 1}
 
 	return desktopkit.Run(desktopkit.Config{
-		ID:             desktopAppID(),
-		Title:          appDisplayName(),
-		Assets:         kitui.Mount(appAssets),
-		Bind:           []interface{}{app},
-		Theme:          desktopkit.DefaultThemeConfig(),
-		Launch:         launch,
-		Window:         window,
-		SingleInstance: true,
-		SecondInstance: func(controller *desktopkit.Controller, data options.SecondInstanceData) {
-			if hasAutoStartArg(data.Args) {
-				return
-			}
-			controller.ShowWindow()
-		},
+		ID:                   desktopAppID(),
+		Title:                appDisplayName(),
+		Assets:               kitui.Mount(appAssets),
+		Bind:                 []interface{}{app},
+		Theme:                desktopkit.DefaultThemeConfig(),
+		Launch:               launch,
+		Window:               window,
+		SingleInstance:       true,
+		SecondInstancePolicy: desktopkit.SecondInstanceWakeManual,
 		Tray: desktopkit.TrayConfig{
 			Enabled:            true,
 			Icon:               trayIcon,
@@ -73,17 +66,9 @@ func runDesktop(app *App, launch desktopkit.LaunchOptions) error {
 			QuitLabel:          "退出 " + appDisplayName(),
 		},
 		Hooks: desktopkit.Hooks{
+			Ready:    app.setController,
 			Startup:  app.startup,
 			Shutdown: app.shutdown,
 		},
 	})
-}
-
-func hasAutoStartArg(args []string) bool {
-	for _, arg := range args {
-		if strings.EqualFold(strings.TrimSpace(arg), "--autostart") {
-			return true
-		}
-	}
-	return false
 }
